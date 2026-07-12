@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+}
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top left, rgba(249, 115, 22, 0.16), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.14), transparent 30%),
+    var(--bg-color);
+}
+
+.login-card {
+  width: min(480px, 100%);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+}
+
+.login-header {
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+.login-header .logo-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), #ec4899);
+}
+
+.login-header h2 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-header p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.login-options .remember-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.login-options input[type="checkbox"] {
+  accent-color: var(--primary-color);
+}
+
+.forgot-password {
+  color: var(--text-primary);
+  transition: color 0.2s ease;
+}
+
+.forgot-password:hover {
+  color: var(--primary-hover);
+}

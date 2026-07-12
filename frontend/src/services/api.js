@@ -16,6 +16,14 @@ export const fetchDashboardStats = async () => {
   return response.json();
 };
 
+export const fetchGlobalSearch = async (query) => {
+  const response = await fetch(`${API_URL}/dashboard/search?q=${encodeURIComponent(query)}`, {
+    headers: getHeaders()
+  });
+  if (!response.ok) throw new Error('Search failed');
+  return response.json();
+};
+
 export const fetchVehicles = async () => {
   const response = await fetch(`${API_URL}/vehicles`, {
     headers: getHeaders()
@@ -93,7 +101,7 @@ export const createTrip = async (data) => {
   return response.json();
 };
 export const updateTrip = async (id, data) => {
-  const response = await fetch(`${API_URL}/trips/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(data) });
+  const response = await fetch(`${API_URL}/trips/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(data) });
   if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Failed to update trip'); }
   return response.json();
 };
@@ -180,5 +188,16 @@ export const fetchNotifications = async () => {
 export const markNotificationRead = async (id) => {
   const response = await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', headers: getHeaders() });
   if (!response.ok) throw new Error('Failed to mark as read');
+  return response.json();
+};
+
+// OCR API
+export const parseOcrText = async (text, type) => {
+  const response = await fetch(`${API_URL}/chat/parse-ocr`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ text, type })
+  });
+  if (!response.ok) throw new Error('Failed to parse OCR');
   return response.json();
 };

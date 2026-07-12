@@ -15,15 +15,15 @@ const IconShield = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heig
 const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: <IconDashboard />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst', 'Driver'] },
+  { path: '/dashboard', label: 'Dashboard', icon: <IconDashboard />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst', 'Driver'] },
   { path: '/vehicles', label: 'Vehicle Registry', icon: <IconCar />, allowedRoles: ['Super Admin', 'Fleet Manager'] },
-  { path: '/drivers', label: 'Driver Management', icon: <IconUsers />, allowedRoles: ['Super Admin', 'Dispatcher', 'Safety Officer'] },
-  { path: '/trips', label: 'Trip Management', icon: <IconRoute />, allowedRoles: ['Super Admin', 'Dispatcher'] },
+  { path: '/drivers', label: 'Driver Management', icon: <IconUsers />, allowedRoles: ['Super Admin', 'Safety Officer'] },
+  { path: '/trips', label: 'Trip Management', icon: <IconRoute />, allowedRoles: ['Super Admin', 'Driver'] },
   { path: '/maintenance', label: 'Maintenance', icon: <IconWrench />, allowedRoles: ['Super Admin', 'Fleet Manager'] },
-  { path: '/fuel', label: 'Fuel & Expense', icon: <IconFuel />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Financial Analyst', 'Driver'] },
-  { path: '/expenses', label: 'Other Expenses', icon: <IconDollar />, allowedRoles: ['Super Admin', 'Financial Analyst', 'Fleet Manager', 'Driver'] },
-  { path: '/reports', label: 'Reports & Analytics', icon: <IconChart />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst'] },
-  { path: '/audit-logs', label: 'Audit Logs', icon: <IconShield />, allowedRoles: ['Super Admin'] },
+  { path: '/fuel', label: 'Fuel & Expense', icon: <IconFuel />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Financial Analyst'] },
+  { path: '/expenses', label: 'Other Expenses', icon: <IconDollar />, allowedRoles: ['Super Admin', 'Financial Analyst'] },
+  { path: '/reports', label: 'Reports & Analytics', icon: <IconChart />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Financial Analyst'] },
+  { path: '/audit-logs', label: 'Audit Logs', icon: <IconShield />, allowedRoles: ['Super Admin', 'Safety Officer'] },
 ];
 
 const Sidebar = ({ userRole }) => {

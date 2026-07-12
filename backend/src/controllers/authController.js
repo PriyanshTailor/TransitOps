@@ -3,10 +3,10 @@ import pool from '../db/pool.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 
 export const signup = async (req, res) => {
-  const { name, email, password, companyName } = req.body;
+  const { name, email, password, companyName, role } = req.body;
   try {
-    if (!name || !email || !password || !companyName) {
-      return res.status(400).json({ error: 'All fields are required.' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required.' });
     }
     
     // Check if user exists
@@ -22,17 +22,19 @@ export const signup = async (req, res) => {
     
     // Check if company exists, if not create
     let companyId;
-    const compRes = await pool.query('SELECT id FROM companies WHERE name = $1', [companyName]);
+    const finalCompanyName = companyName || 'TransitOps';
+    const compRes = await pool.query('SELECT id FROM companies WHERE name = $1', [finalCompanyName]);
     if (compRes.rows.length > 0) {
       companyId = compRes.rows[0].id;
     } else {
-      const newComp = await pool.query('INSERT INTO companies (name) VALUES ($1) RETURNING id', [companyName]);
+      const newComp = await pool.query('INSERT INTO companies (name) VALUES ($1) RETURNING id', [finalCompanyName]);
       companyId = newComp.rows[0].id;
     }
 
-    // Get Admin Role ID
-    const roleRes = await pool.query('SELECT id FROM roles WHERE name = $1', ['Super Admin']);
-    const roleId = roleRes.rows[0].id;
+    // Get Role ID
+    const finalRole = role || 'Super Admin';
+    const roleRes = await pool.query('SELECT id FROM roles WHERE name = $1', [finalRole]);
+    const roleId = roleRes.rows.length > 0 ? roleRes.rows[0].id : 1;
 
     // Create User
     const userRes = await pool.query(
@@ -43,8 +45,8 @@ export const signup = async (req, res) => {
 
     await pool.query('COMMIT');
 
-    const accessToken = generateAccessToken(user.id, companyId, 'Super Admin');
-    const refreshToken = generateRefreshToken(user.id, companyId, 'Super Admin');
+    const accessToken = generateAccessToken(user.id, companyId, finalRole);
+    const refreshToken = generateRefreshToken(user.id, companyId, finalRole);
 
     res.status(201).json({
       message: 'Signup successful',
@@ -54,7 +56,7 @@ export const signup = async (req, res) => {
         id: user.id,
         name: user.name,
         email,
-        role: 'Super Admin',
+        role: finalRole,
         companyId
       }
     });

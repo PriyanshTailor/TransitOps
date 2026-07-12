@@ -5,9 +5,9 @@ import { authorizeRoles } from '../middlewares/roleMiddleware.js';
 
 const router = express.Router();
 
-router.get('/', authMiddleware, getMaintenance);
-router.post('/', authMiddleware, authorizeRoles('Super Admin', 'Fleet Manager'), createMaintenance);
-router.put('/:id', authMiddleware, authorizeRoles('Super Admin', 'Fleet Manager'), updateMaintenance);
-router.delete('/:id', authMiddleware, authorizeRoles('Super Admin', 'Fleet Manager'), deleteMaintenance);
+router.get('/', authMiddleware, authorizeRoles('Fleet Manager', 'Driver', 'Financial Analyst'), getMaintenance);
+router.post('/', authMiddleware, authorizeRoles('Fleet Manager'), createMaintenance);
+router.put('/:id', authMiddleware, authorizeRoles('Fleet Manager'), updateMaintenance);
+router.delete('/:id', authMiddleware, authorizeRoles('Fleet Manager'), deleteMaintenance);
 
 export default router;

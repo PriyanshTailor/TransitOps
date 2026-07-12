@@ -6,7 +6,7 @@ import { authorizeRoles } from '../middlewares/roleMiddleware.js';
 const router = express.Router();
 
 // Only specific roles can manage vehicles
-router.get('/', authMiddleware, getVehicles);
+router.get('/', authMiddleware, authorizeRoles('Fleet Manager', 'Driver', 'Financial Analyst'), getVehicles);
 router.post('/', authMiddleware, authorizeRoles('Fleet Manager'), createVehicle);
 router.put('/:id', authMiddleware, authorizeRoles('Fleet Manager'), updateVehicle);
 router.delete('/:id', authMiddleware, authorizeRoles('Fleet Manager'), deleteVehicle);

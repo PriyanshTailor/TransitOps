@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import { fetchTrips, createTrip, updateTrip, deleteTrip, fetchVehicles, fetchDrivers } from '../services/api';
+import ActiveTripTracker from '../components/ActiveTripTracker';
 
 const TripManagement = () => {
   const [trips, setTrips] = useState([]);
@@ -132,6 +133,10 @@ const TripManagement = () => {
           {isAdding ? 'Cancel' : '+ New Trip'}
         </Button>
       </div>
+
+      {trips.some(t => t.status === 'In Transit' || t.status === 'Dispatched') && (
+        <ActiveTripTracker trip={trips.find(t => t.status === 'In Transit' || t.status === 'Dispatched')} />
+      )}
 
       {error && <div style={{color: 'var(--danger)', padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px'}}>{error}</div>}
 

@@ -70,14 +70,14 @@ const App = () => {
     );
   }
 
-  // Role Permissions
+  // Role Permissions according to PDF
   const canManageVehicles = ['Super Admin', 'Fleet Manager'].includes(userRole);
-  const canManageDrivers = ['Super Admin', 'Dispatcher', 'Safety Officer'].includes(userRole);
-  const canManageTrips = ['Super Admin', 'Dispatcher'].includes(userRole);
+  const canManageDrivers = ['Super Admin', 'Safety Officer'].includes(userRole);
+  const canManageTrips = ['Super Admin', 'Driver'].includes(userRole);
   const canManageMaintenance = ['Super Admin', 'Fleet Manager'].includes(userRole);
-          const canManageFuel = ['Super Admin', 'Fleet Manager', 'Financial Analyst', 'Driver'].includes(userRole);
-  const canManageExpenses = ['Super Admin', 'Financial Analyst', 'Fleet Manager', 'Driver'].includes(userRole);
-  const canViewReports = ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst'].includes(userRole);
+  const canManageFuel = ['Super Admin', 'Fleet Manager', 'Financial Analyst'].includes(userRole);
+  const canManageExpenses = ['Super Admin', 'Financial Analyst'].includes(userRole);
+  const canViewReports = ['Super Admin', 'Fleet Manager', 'Financial Analyst'].includes(userRole);
   const canManageSettings = ['Super Admin'].includes(userRole);
 
   return (

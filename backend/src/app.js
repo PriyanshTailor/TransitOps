@@ -10,6 +10,8 @@ import fuelRoutes from './routes/fuelRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 const app = express();
 
@@ -27,6 +29,8 @@ app.use('/api/fuel', fuelRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/chat', chatRoutes);
 
 // TODO: Implement the rest of the modular routes
 // app.use('/api/trips', tripRoutes);

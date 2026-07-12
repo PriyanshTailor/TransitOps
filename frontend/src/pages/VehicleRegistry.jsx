@@ -4,7 +4,7 @@ import Table from '../components/ui/Table';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { fetchVehicles, createVehicle, updateVehicle, deleteVehicle } from '../services/api';
+import { fetchVehicles, createVehicle, updateVehicle, deleteVehicle, parseOcrText } from '../services/api';
 
 const VehicleRegistry = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -17,6 +17,7 @@ const VehicleRegistry = () => {
     vin_number: '', purchase_date: '', insurance_expiry: ''
   });
   const [error, setError] = useState('');
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   useEffect(() => {
     loadVehicles();
@@ -82,6 +83,34 @@ const VehicleRegistry = () => {
       loadVehicles();
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setOcrLoading(true);
+    try {
+      const Tesseract = (await import('tesseract.js')).default;
+      const result = await Tesseract.recognize(file, 'eng');
+      const text = result.data.text;
+      
+      // Use AI to parse the messy text (supported in backend via HuggingFace)
+      const parsedData = await parseOcrText(text, 'rc');
+      
+      setFormData(prev => ({
+        ...prev,
+        reg_number: parsedData.reg_number || parsedData.registration_number || prev.reg_number,
+        name: parsedData.name || prev.name,
+        vin_number: parsedData.vin_number || parsedData.vin || prev.vin_number
+      }));
+      
+    } catch (err) {
+      console.error("OCR failed", err);
+      setError("Failed to auto-read image. Please enter manually.");
+    } finally {
+      setOcrLoading(false);
     }
   };
 
@@ -158,8 +187,10 @@ const VehicleRegistry = () => {
               <Input label="Purchase Date" name="purchase_date" type="date" value={formData.purchase_date} onChange={handleChange} />
               <Input label="Insurance Expiry" name="insurance_expiry" type="date" value={formData.insurance_expiry} onChange={handleChange} />
               <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem'}}>
-                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>RC Document Upload (Optional)</label>
-                <input type="file" style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
+                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>
+                  RC Document Upload (Optional) {ocrLoading && <span style={{color: 'var(--primary)', fontSize: '0.75rem'}}>(Scanning...)</span>}
+                </label>
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
               </div>
             </div>
             {editingId && (

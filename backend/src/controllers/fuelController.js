@@ -12,6 +12,7 @@ export const getFuel = async (req, res) => {
     `, [req.user.companyId]);
     res.json(result.rows);
   } catch (err) {
+    console.error("GET FUEL ERROR:", err);
     res.status(500).json({ error: 'Failed to fetch fuel records' });
   }
 };

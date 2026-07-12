@@ -4,7 +4,7 @@ import Table from '../components/ui/Table';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { fetchDrivers, createDriver, updateDriver, deleteDriver } from '../services/api';
+import { fetchDrivers, createDriver, updateDriver, deleteDriver, parseOcrText } from '../services/api';
 
 const DriverManagement = () => {
   const [drivers, setDrivers] = useState([]);
@@ -13,10 +13,11 @@ const DriverManagement = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '', license_number: '', category: 'Heavy', license_expiry: '', 
-    contact_number: '', score: '100', status: 'Available',
+    phone: '', score: '100', status: 'Available',
     experience_years: '', blood_group: ''
   });
   const [error, setError] = useState('');
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   useEffect(() => {
     loadDrivers();
@@ -64,7 +65,7 @@ const DriverManagement = () => {
       category: driver.category,
       // Format date for input[type="date"]
       license_expiry: driver.license_expiry ? new Date(driver.license_expiry).toISOString().split('T')[0] : '',
-      contact_number: driver.contact_number || '',
+      phone: driver.phone || '',
       score: driver.score,
       status: driver.status,
       experience_years: driver.experience_years || '',
@@ -85,9 +86,40 @@ const DriverManagement = () => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setOcrLoading(true);
+    try {
+      const Tesseract = (await import('tesseract.js')).default;
+      const result = await Tesseract.recognize(file, 'eng');
+      const text = result.data.text;
+      
+      // Use Mistral AI to parse the messy text
+      const parsedData = await parseOcrText(text, 'dl');
+      
+      setFormData(prev => ({
+        ...prev,
+        name: parsedData.name || prev.name,
+        license_number: parsedData.license_number || prev.license_number,
+        license_expiry: parsedData.license_expiry || prev.license_expiry,
+        blood_group: parsedData.blood_group || prev.blood_group,
+        category: parsedData.category || prev.category
+      }));
+      
+    } catch (err) {
+      console.error("OCR failed", err);
+      setError("Failed to auto-read image. Please enter manually.");
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const resetForm = () => {
     setFormData({ 
       name: '', license_number: '', category: 'Heavy', license_expiry: '', 
-      contact_number: '', score: '100', status: 'Available',
+      phone: '', score: '100', status: 'Available',
       experience_years: '', blood_group: ''
     });
   };
@@ -95,7 +127,7 @@ const DriverManagement = () => {
   const columns = [
     { header: 'Driver Name', accessor: 'name' },
     { header: 'License No', accessor: 'license_number' },
-    { header: 'Contact', accessor: 'contact_number' },
+    { header: 'Contact', accessor: 'phone' },
     { header: 'Category', accessor: 'category' },
     { 
       header: 'Expiry Date', 
@@ -169,7 +201,7 @@ const DriverManagement = () => {
                 <Input label="License Number" name="license_number" value={formData.license_number} onChange={handleChange} required placeholder="e.g. DL-123456789" />
             </div>
             <div className="flex gap-md w-full">
-                <Input label="Contact Number" name="contact_number" value={formData.contact_number} onChange={handleChange} placeholder="e.g. +1 234 567 890" />
+                <Input label="Contact Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="e.g. +1 234 567 890" />
                 <Input label="Category" name="category" value={formData.category} onChange={handleChange} placeholder="e.g. Heavy" />
             </div>
             <div className="flex gap-md w-full">
@@ -180,8 +212,10 @@ const DriverManagement = () => {
               <Input label="Experience (Years)" name="experience_years" type="number" value={formData.experience_years} onChange={handleChange} />
               <Input label="Blood Group" name="blood_group" value={formData.blood_group} onChange={handleChange} placeholder="e.g. O+" />
               <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem'}}>
-                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>DL Document Upload</label>
-                <input type="file" style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
+                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>
+                  DL Document Upload {ocrLoading && <span style={{color: 'var(--primary)', fontSize: '0.75rem'}}>(Scanning...)</span>}
+                </label>
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
               </div>
             </div>
             {editingId && (

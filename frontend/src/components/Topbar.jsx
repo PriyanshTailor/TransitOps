@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { fetchNotifications, markNotificationRead } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { fetchNotifications, markNotificationRead, fetchGlobalSearch } from '../services/api';
 import './Topbar.css';
 
 const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
@@ -18,6 +19,14 @@ const Topbar = ({ onLogout }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({ vehicles: [], drivers: [], trips: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const searchRef = useRef(null);
+  
+  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -52,10 +61,36 @@ const Topbar = ({ onLogout }) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearch(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [dropdownRef]);
+  }, [dropdownRef, searchRef]);
+
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults({ vehicles: [], drivers: [], trips: [] });
+      setShowSearch(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await fetchGlobalSearch(searchQuery);
+        setSearchResults(results);
+        setShowSearch(true);
+      } catch (err) {
+        console.error("Search error", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleMarkRead = async (id) => {
     try {
@@ -72,13 +107,62 @@ const Topbar = ({ onLogout }) => {
 
   return (
     <header className="topbar">
-      <div className="topbar-search">
+      <div className="topbar-search" ref={searchRef} style={{ position: 'relative' }}>
         <IconSearch />
         <input 
           type="text" 
           placeholder="Search vehicles, drivers, trips..." 
           className="search-input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => { if (searchQuery.length >= 2) setShowSearch(true); }}
         />
+        {showSearch && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, width: '100%', minWidth: '350px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 100, boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginTop: '0.5rem', maxHeight: '400px', overflowY: 'auto' }}>
+            {isSearching ? (
+              <div style={{ padding: '1rem', color: 'var(--text-secondary)', textAlign: 'center' }}>Searching...</div>
+            ) : (
+              <>
+                {searchResults.vehicles.length > 0 && (
+                  <div style={{ padding: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', padding: '0.25rem 0.5rem', textTransform: 'uppercase' }}>Vehicles</div>
+                    {searchResults.vehicles.map(v => (
+                      <div key={v.id} onClick={() => { navigate('/vehicles'); setShowSearch(false); }} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '4px', borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{v.reg_number}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{v.name} - {v.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchResults.drivers.length > 0 && (
+                  <div style={{ padding: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', padding: '0.25rem 0.5rem', textTransform: 'uppercase' }}>Drivers</div>
+                    {searchResults.drivers.map(d => (
+                      <div key={d.id} onClick={() => { navigate('/drivers'); setShowSearch(false); }} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '4px', borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{d.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.license_number} - {d.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchResults.trips.length > 0 && (
+                  <div style={{ padding: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', padding: '0.25rem 0.5rem', textTransform: 'uppercase' }}>Trips</div>
+                    {searchResults.trips.map(t => (
+                      <div key={t.id} onClick={() => { navigate('/trips'); setShowSearch(false); }} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '4px', borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{t.origin} → {t.destination}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchResults.vehicles.length === 0 && searchResults.drivers.length === 0 && searchResults.trips.length === 0 && (
+                   <div style={{ padding: '1rem', color: 'var(--text-secondary)', textAlign: 'center' }}>No results found</div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
       <div className="topbar-actions">
         <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">

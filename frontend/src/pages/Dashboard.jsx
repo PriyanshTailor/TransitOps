@@ -12,12 +12,10 @@ const Dashboard = () => {
   const [filter, setFilter] = useState('All');
   const [kpiData, setKpiData] = useState({
     totalVehicles: 0,
-    availableVehicles: 0,
-    vehiclesInMaintenance: 0,
     activeTrips: 0,
-    pendingTrips: 0,
-    driversOnDuty: 0,
-    fleetUtilization: 0
+    vehiclesInShop: 0,
+    pendingExpenses: 0,
+    totalRevenue: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,20 +52,8 @@ const Dashboard = () => {
       <div className="kpi-grid">
         <Card>
           <div className="kpi-content">
-            <span className="kpi-label">Active Vehicles</span>
-            <span className="kpi-value text-info">{loading ? '...' : (kpiData.totalVehicles - kpiData.vehiclesInMaintenance)}</span>
-          </div>
-        </Card>
-        <Card>
-          <div className="kpi-content">
-            <span className="kpi-label">Available Vehicles</span>
-            <span className="kpi-value text-success">{loading ? '...' : kpiData.availableVehicles}</span>
-          </div>
-        </Card>
-        <Card>
-          <div className="kpi-content">
-            <span className="kpi-label">In Maintenance</span>
-            <span className="kpi-value text-warning">{loading ? '...' : kpiData.vehiclesInMaintenance}</span>
+            <span className="kpi-label">Total Vehicles</span>
+            <span className="kpi-value text-info">{loading ? '...' : kpiData.totalVehicles}</span>
           </div>
         </Card>
         <Card>
@@ -78,14 +64,26 @@ const Dashboard = () => {
         </Card>
         <Card>
           <div className="kpi-content">
-            <span className="kpi-label">Pending Trips</span>
-            <span className="kpi-value text-secondary">{loading ? '...' : kpiData.pendingTrips}</span>
+            <span className="kpi-label">Vehicles In Shop</span>
+            <span className="kpi-value text-danger">{loading ? '...' : kpiData.vehiclesInShop}</span>
+          </div>
+        </Card>
+        <Card>
+          <div className="kpi-content">
+            <span className="kpi-label">Pending Expenses</span>
+            <span className="kpi-value text-warning">{loading ? '...' : kpiData.pendingExpenses}</span>
+          </div>
+        </Card>
+        <Card>
+          <div className="kpi-content">
+            <span className="kpi-label">Total Revenue</span>
+            <span className="kpi-value text-success">{loading ? '...' : `$${kpiData.totalRevenue}`}</span>
           </div>
         </Card>
         <Card>
           <div className="kpi-content">
             <span className="kpi-label">Fleet Utilization</span>
-            <span className="kpi-value">{loading ? '...' : kpiData.fleetUtilization}%</span>
+            <span className="kpi-value">{loading ? '...' : (kpiData.totalVehicles > 0 ? Math.round(((kpiData.totalVehicles - kpiData.vehiclesInShop) / kpiData.totalVehicles) * 100) : 0)}%</span>
           </div>
         </Card>
       </div>

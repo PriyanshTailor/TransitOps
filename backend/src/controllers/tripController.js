@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 export const getTrips = async (req, res) => {
   try {
@@ -32,6 +33,9 @@ export const createTrip = async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'Draft') RETURNING *`,
       [req.user.companyId, trip_number, origin, destination, vehicle_id || null, driver_id || null, cargo_weight, cargo_type, expected_distance, expected_time, expected_fuel, expected_cost, revenue || 0, route_details, trip_date]
     );
+    
+    await logAudit(req.user.companyId, req.user.id, 'CREATE_TRIP', 'trips', result.rows[0].id, `Created trip ${trip_number}`);
+    
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Trip number already exists.' });
@@ -89,6 +93,8 @@ export const updateTripStatus = async (req, res) => {
       'UPDATE trips SET status = $1 WHERE id = $2 AND company_id = $3 RETURNING *',
       [status, id, req.user.companyId]
     );
+
+    await logAudit(req.user.companyId, req.user.id, 'UPDATE_TRIP_STATUS', 'trips', id, `Updated trip status from ${trip.status} to ${status}`);
 
     await pool.query('COMMIT');
     res.json(result.rows[0]);

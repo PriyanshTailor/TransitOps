@@ -1,29 +1,38 @@
 import pool from '../db/pool.js';
 
 export const getDashboardStats = async (req, res) => {
-  const { companyId } = req.user;
+  const companyId = req.user.companyId;
+
   try {
-    const totalVehiclesRes = await pool.query('SELECT COUNT(*) FROM vehicles WHERE company_id = $1', [companyId]);
-    const availableVehiclesRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'Available'", [companyId]);
-    const inShopVehiclesRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'In Shop'", [companyId]);
-    const activeTripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status = 'Dispatched'", [companyId]);
-    const pendingTripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status = 'Draft'", [companyId]);
-    const driversOnDutyRes = await pool.query("SELECT COUNT(*) FROM drivers WHERE company_id = $1 AND status = 'On Trip'", [companyId]);
-    
-    const totalV = parseInt(totalVehiclesRes.rows[0].count);
-    const activeT = parseInt(activeTripsRes.rows[0].count);
-    const utilization = totalV > 0 ? Math.round((activeT / totalV) * 100) : 0;
+    // 1. Total active vehicles
+    const vehiclesRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status != 'Retired'", [companyId]);
+    const totalVehicles = parseInt(vehiclesRes.rows[0].count);
+
+    // 2. Active Trips
+    const tripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status IN ('Dispatched', 'In Transit')", [companyId]);
+    const activeTrips = parseInt(tripsRes.rows[0].count);
+
+    // 3. Vehicles in Shop
+    const shopRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'In Shop'", [companyId]);
+    const vehiclesInShop = parseInt(shopRes.rows[0].count);
+
+    // 4. Pending Expenses
+    const expRes = await pool.query("SELECT COUNT(*) FROM expenses WHERE company_id = $1 AND approval_status = 'Pending'", [companyId]);
+    const pendingExpenses = parseInt(expRes.rows[0].count);
+
+    // 5. Total Revenue (Completed Trips this month - simplified to all time for now)
+    const revRes = await pool.query("SELECT SUM(revenue) FROM trips WHERE company_id = $1 AND status = 'Completed'", [companyId]);
+    const totalRevenue = revRes.rows[0].sum || 0;
 
     res.json({
-      totalVehicles: totalV,
-      availableVehicles: parseInt(availableVehiclesRes.rows[0].count),
-      vehiclesInMaintenance: parseInt(inShopVehiclesRes.rows[0].count),
-      activeTrips: activeT,
-      pendingTrips: parseInt(pendingTripsRes.rows[0].count),
-      driversOnDuty: parseInt(driversOnDutyRes.rows[0].count),
-      fleetUtilization: utilization
+      totalVehicles,
+      activeTrips,
+      vehiclesInShop,
+      pendingExpenses,
+      totalRevenue
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    console.error("Dashboard Stats Error:", err);
+    res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
   }
 };

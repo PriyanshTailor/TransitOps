@@ -1,6 +1,6 @@
 const API_URL = 'http://localhost:5000/api';
 
-const getHeaders = () => {
+export const getHeaders = () => {
   const token = localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
@@ -168,5 +168,17 @@ export const updateExpenseStatus = async (id, statusData) => {
 export const deleteExpense = async (id) => {
   const response = await fetch(`${API_URL}/expenses/${id}`, { method: 'DELETE', headers: getHeaders() });
   if (!response.ok) throw new Error('Failed to delete expense');
+  return response.json();
+};
+
+// NOTIFICATION APIs
+export const fetchNotifications = async () => {
+  const response = await fetch(`${API_URL}/notifications`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch notifications');
+  return response.json();
+};
+export const markNotificationRead = async (id) => {
+  const response = await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to mark as read');
   return response.json();
 };

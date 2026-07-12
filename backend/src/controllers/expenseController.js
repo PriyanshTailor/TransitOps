@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 export const getExpenses = async (req, res) => {
   try {
@@ -40,6 +41,9 @@ export const updateExpenseStatus = async (req, res) => {
       [approval_status, id, req.user.companyId]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Expense not found' });
+    
+    await logAudit(req.user.companyId, req.user.id, 'APPROVE_EXPENSE', 'expenses', id, `Updated expense status to ${approval_status}`);
+    
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update expense status' });

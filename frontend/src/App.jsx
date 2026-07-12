@@ -10,6 +10,7 @@ import TripManagement from './pages/TripManagement';
 import Maintenance from './pages/Maintenance';
 import FuelExpense from './pages/FuelExpense';
 import Expenses from './pages/Expenses';
+import AuditLogs from './pages/AuditLogs';
 import ReportsAnalytics from './pages/Reports';
 import Settings from './pages/Settings';
 
@@ -128,6 +129,12 @@ const App = () => {
             </ProtectedRoute>
           } />
           
+          <Route path="audit-logs" element={
+            <ProtectedRoute isAllowed={userRole === 'Super Admin'}>
+              <AuditLogs />
+            </ProtectedRoute>
+          } />
+
           <Route path="settings" element={
             <ProtectedRoute isAllowed={canManageSettings}>
               <Settings />

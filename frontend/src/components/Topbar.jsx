@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { fetchNotifications, markNotificationRead } from '../services/api';
 import './Topbar.css';
 
 const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
@@ -13,6 +14,10 @@ const Topbar = ({ onLogout }) => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+  
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const dropdownRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -25,6 +30,41 @@ const Topbar = ({ onLogout }) => {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const loadNotifs = async () => {
+      try {
+        const data = await fetchNotifications();
+        setNotifications(data);
+      } catch (e) {
+        console.error("Failed to load notifications");
+      }
+    };
+    loadNotifs();
+    
+    // Poll every 30 seconds
+    const interval = setInterval(loadNotifs, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
+
+  const handleMarkRead = async (id) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -44,9 +84,36 @@ const Topbar = ({ onLogout }) => {
         <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
           {isDarkMode ? <IconSun /> : <IconMoon />}
         </button>
-        <button className="icon-btn">
-          <IconBell />
-        </button>
+        <div className="notification-wrapper" ref={dropdownRef} style={{ position: 'relative' }}>
+          <button className="icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
+            <IconBell />
+            {notifications.filter(n => !n.is_read).length > 0 && (
+              <span style={{ position: 'absolute', top: 0, right: 0, background: 'var(--danger)', color: 'white', fontSize: '0.7rem', padding: '2px 5px', borderRadius: '50%' }}>
+                {notifications.filter(n => !n.is_read).length}
+              </span>
+            )}
+          </button>
+          
+          {showNotifications && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, width: '300px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', zIndex: 100, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold' }}>Notifications</div>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No notifications</div>
+                ) : (
+                  notifications.map(n => (
+                    <div key={n.id} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', background: n.is_read ? 'transparent' : 'rgba(59, 130, 246, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '0.875rem' }}>{n.message}</div>
+                      {!n.is_read && (
+                        <button onClick={() => handleMarkRead(n.id)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.75rem' }}>Mark Read</button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <div className="user-profile">
           <IconUser className="avatar-icon" />
           <div className="user-info">

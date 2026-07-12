@@ -13,6 +13,7 @@ import Expenses from './pages/Expenses';
 import AuditLogs from './pages/AuditLogs';
 import ReportsAnalytics from './pages/Reports';
 import Settings from './pages/Settings';
+import Telemetry from './pages/Telemetry';
 
 const ProtectedRoute = ({ isAllowed, children, redirectTo = "/dashboard" }) => {
   if (!isAllowed) {
@@ -79,6 +80,7 @@ const App = () => {
   const canManageExpenses = ['Super Admin', 'Financial Analyst'].includes(userRole);
   const canViewReports = ['Super Admin', 'Fleet Manager', 'Financial Analyst'].includes(userRole);
   const canManageSettings = ['Super Admin'].includes(userRole);
+  const canViewTelemetry = ['Driver'].includes(userRole);
 
   return (
     <BrowserRouter>
@@ -86,6 +88,12 @@ const App = () => {
         <Route path="/" element={<MainLayout onLogout={handleLogout} userRole={userRole} />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          
+          <Route path="telemetry" element={
+            <ProtectedRoute isAllowed={canViewTelemetry}>
+              <Telemetry />
+            </ProtectedRoute>
+          } />
           
           <Route path="vehicles" element={
             <ProtectedRoute isAllowed={canManageVehicles}>

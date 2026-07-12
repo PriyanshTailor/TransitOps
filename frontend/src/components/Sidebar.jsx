@@ -16,6 +16,7 @@ const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" he
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: <IconDashboard />, allowedRoles: ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst', 'Driver'] },
+  { path: '/telemetry', label: 'Live Telemetry', icon: <IconRoute />, allowedRoles: ['Driver'] },
   { path: '/vehicles', label: 'Vehicle Registry', icon: <IconCar />, allowedRoles: ['Super Admin', 'Fleet Manager'] },
   { path: '/drivers', label: 'Driver Management', icon: <IconUsers />, allowedRoles: ['Super Admin', 'Safety Officer'] },
   { path: '/trips', label: 'Trip Management', icon: <IconRoute />, allowedRoles: ['Super Admin', 'Driver'] },

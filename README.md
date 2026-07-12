@@ -24,6 +24,22 @@ TransitOps provides a highly secure, multi-tenant environment tailored to differ
 * **💰 Financial Analyst:** Oversee revenue, expenses, fuel costs, and generate financial reports.
 * **🛣️ Driver:** A focused, distraction-free view featuring assigned trips and an exclusive **Live Telemetry Tracker** (with real-time weather and route visualization).
 
+### 📐 System Architecture
+TransitOps employs a modern, decoupled architecture connecting a fast React frontend with a robust Node.js API, powered by a relational PostgreSQL database and external AI services.
+
+```mermaid
+graph TD
+    Client[("💻 Client (React + Vite)")] -->|REST API & JWT| API["⚙️ API Gateway (Node.js/Express)"]
+    API --> DB[("🗄️ Database (PostgreSQL)")]
+    API --> AI["🤖 AI Engine (Hugging Face API)"]
+    API --> ThirdParty["🌤️ Third-Party Services (Open-Meteo)"]
+    
+    style Client fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+    style API fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    style DB fill:#336791,stroke:#1e3a8a,stroke-width:2px,color:#fff
+    style AI fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+```
+
 ### 🧠 AI-Powered Automation
 * **Intelligent Document OCR:** Automatically extract critical data from uploaded Vehicle Registration Certificates (RCs) and Driver's Licenses using advanced Large Language Models (Qwen2.5-7B-Instruct via Hugging Face). It instantly populates complex forms, reducing manual data entry to zero.
 * **Conversational AI Assistant:** A built-in AI chatbot capable of analyzing fleet data and answering complex operational questions.
@@ -32,10 +48,58 @@ TransitOps provides a highly secure, multi-tenant environment tailored to differ
 * **Dashboard:** High-level KPIs, real-time metrics, and dynamic 6-month trend charts for revenue, fuel, and expenses.
 * **Global Search:** Lightning-fast, unified search across vehicles, drivers, and active trips accessible directly from the top navigation bar.
 * **Vehicle & Driver Registry:** Track vehicle health, odometers, capacities, driver safety scores, and compliance metrics.
-* **Trip Dispatch Workflow:** Plan trips, assign resources, track expected vs actual revenue, and move trips through a strict status pipeline (Draft → Assigned → Dispatched → In Transit → Completed).
+* **Trip Dispatch Workflow:** Plan trips, assign resources, track expected vs actual revenue, and move trips through a strict status pipeline.
+  
+  ```mermaid
+  stateDiagram-v2
+      [*] --> Draft: Create Trip
+      Draft --> Assigned: Allocate Driver & Vehicle
+      Assigned --> Dispatched: Fleet Manager Approval
+      Dispatched --> In_Transit: Driver Departs
+      In_Transit --> Completed: Arrived at Destination
+      
+      state In_Transit {
+          [*] --> TelemetryActive
+          TelemetryActive --> WeatherUpdates
+          TelemetryActive --> RouteTracking
+      }
+  ```
+
 * **Live Telemetry (Driver Exclusive):** Features a beautiful SVG-based dynamic route map and real-time weather data (via Open-Meteo API) for origin and destination cities.
 * **Financials & Maintenance:** Log toll fees, routine maintenance costs, and fuel receipts to calculate true operational profitability.
 * **System Audit Logs:** Immutable tracking of critical actions (who did what and when) for ultimate accountability.
+
+### 🗃️ Core Entity Data Model
+```mermaid
+erDiagram
+    COMPANY ||--o{ USERS : employs
+    COMPANY ||--o{ VEHICLES : owns
+    COMPANY ||--o{ DRIVERS : manages
+    USERS }|--|| ROLES : has
+    VEHICLES ||--o{ TRIPS : assigned_to
+    DRIVERS ||--o{ TRIPS : performs
+    TRIPS ||--o{ EXPENSES : incurs
+
+    VEHICLES {
+        uuid id PK
+        string reg_number
+        string model
+        string status
+    }
+    DRIVERS {
+        uuid id PK
+        string name
+        string license_number
+        string safety_score
+    }
+    TRIPS {
+        uuid id PK
+        string status
+        string origin
+        string destination
+        float revenue
+    }
+```
 
 ---
 

@@ -1,0 +1,13 @@
+/* We can reuse the login container styles */
+@import './Login.css';
+
+.error-alert {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 // Removed lucide-react import
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -8,14 +8,42 @@ import './Login.css';
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate authentication
-    if (email && password) {
-      onLogin();
+    setError('');
+
+    if (!email || !password) {
+      setError('Email and password are required.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store JWT in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      onLogin(); // Tell App component we are logged in
       navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -30,11 +58,14 @@ const Login = ({ onLogin }) => {
           <p>Smart Transport Operations Platform</p>
         </div>
         
+        {error && <div className="error-alert">{error}</div>}
+
         <form onSubmit={handleSubmit} className="login-form">
           <Input 
             label="Email Address" 
             type="email" 
-            placeholder="admin@transitops.com"
+            name="email"
+            placeholder="admin@fasttrack.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -42,6 +73,7 @@ const Login = ({ onLogin }) => {
           <Input 
             label="Password" 
             type="password" 
+            name="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -55,9 +87,13 @@ const Login = ({ onLogin }) => {
             <a href="#" className="forgot-password">Forgot password?</a>
           </div>
 
-          <Button type="submit" className="w-full" style={{ marginTop: '1rem', padding: '0.75rem' }}>
-            Sign In
+          <Button type="submit" className="w-full" style={{ marginTop: '1rem', padding: '0.75rem' }} disabled={loading}>
+            {loading ? 'Signing In...' : 'Sign In'}
           </Button>
+
+          <div className="login-options" style={{justifyContent: 'center', marginTop: '1rem'}}>
+            <span>Don't have an account? <Link to="/signup" className="forgot-password">Sign Up</Link></span>
+          </div>
         </form>
       </div>
     </div>

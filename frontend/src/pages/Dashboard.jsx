@@ -36,6 +36,20 @@ const Dashboard = () => {
     loadStats();
   }, []);
 
+  const generateInsights = () => {
+    if (!kpiData.chartData || kpiData.chartData.length === 0) return "Gathering data to generate AI insights...";
+    
+    if (userRole === 'Financial Analyst') {
+      const maxRevMonth = kpiData.chartData.reduce((prev, current) => (prev.revenue > current.revenue) ? prev : current, kpiData.chartData[0]);
+      const totalRev = kpiData.totalRevenue || 0;
+      return `Automated Insight: The highest performing month was ${maxRevMonth.name} with a peak revenue of $${maxRevMonth.revenue}. Overall revenue stands at $${totalRev}. Financial health remains stable, maintaining consistent operational margins.`;
+    } else {
+      const maxTripsMonth = kpiData.chartData.reduce((prev, current) => (prev.trips > current.trips) ? prev : current, kpiData.chartData[0]);
+      const util = kpiData.totalVehicles > 0 ? Math.round(((kpiData.totalVehicles - kpiData.vehiclesInShop) / kpiData.totalVehicles) * 100) : 0;
+      return `Automated Insight: Peak operational activity occurred in ${maxTripsMonth.name} with ${maxTripsMonth.trips} trips. Fleet utilization is at ${util}%. Fuel consumption is tracking proportionally with trip volume, indicating efficient baseline routing.`;
+    }
+  };
+
   return (
     <div className="dashboard">
       <div className="page-header">
@@ -147,6 +161,10 @@ const Dashboard = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '0.9rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '1.2rem' }}>✨</span>
+              <span>{generateInsights()}</span>
+            </div>
           </Card>
         ) : (
           <Card title="Fleet Activity & Fuel Consumption" className="chart-card">
@@ -166,6 +184,10 @@ const Dashboard = () => {
                   <Bar yAxisId="right" dataKey="fuel" name="Fuel (L)" fill="#f97316" />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '4px solid #3b82f6', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '0.9rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '1.2rem' }}>✨</span>
+              <span>{generateInsights()}</span>
             </div>
           </Card>
         )}

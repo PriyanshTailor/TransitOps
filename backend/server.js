@@ -173,6 +173,125 @@ app.get('/api/auth/me', async (req, res) => {
     }
 });
 
+// ----------------------------------------------------
+// MIDDLEWARE: AUTHENTICATION
+// ----------------------------------------------------
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Contains userId and companyId
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+};
+
+// ----------------------------------------------------
+// DASHBOARD ROUTES
+// ----------------------------------------------------
+app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const totalVehiclesRes = await pool.query('SELECT COUNT(*) FROM vehicles WHERE company_id = $1', [companyId]);
+    const availableVehiclesRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'Available'", [companyId]);
+    const inShopVehiclesRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'In Shop'", [companyId]);
+    const activeTripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status = 'Dispatched'", [companyId]);
+    const pendingTripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status = 'Draft'", [companyId]);
+    const driversOnDutyRes = await pool.query("SELECT COUNT(*) FROM drivers WHERE company_id = $1 AND status = 'On Trip'", [companyId]);
+    
+    // Quick fleet utilization calculation (Active Trips / Total Vehicles)
+    const totalV = parseInt(totalVehiclesRes.rows[0].count);
+    const activeT = parseInt(activeTripsRes.rows[0].count);
+    const utilization = totalV > 0 ? Math.round((activeT / totalV) * 100) : 0;
+
+    res.json({
+      totalVehicles: totalV,
+      availableVehicles: parseInt(availableVehiclesRes.rows[0].count),
+      vehiclesInMaintenance: parseInt(inShopVehiclesRes.rows[0].count),
+      activeTrips: activeT,
+      pendingTrips: parseInt(pendingTripsRes.rows[0].count),
+      driversOnDuty: parseInt(driversOnDutyRes.rows[0].count),
+      fleetUtilization: utilization
+    });
+  } catch (err) {
+    console.error('Dashboard Stats Error:', err);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
+});
+
+// ----------------------------------------------------
+// VEHICLE ROUTES
+// ----------------------------------------------------
+
+// GET All Vehicles
+app.get('/api/vehicles', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const result = await pool.query('SELECT * FROM vehicles WHERE company_id = $1 ORDER BY created_at DESC', [companyId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Vehicles Error:', err);
+    res.status(500).json({ error: 'Failed to fetch vehicles' });
+  }
+});
+
+// POST Create Vehicle
+app.post('/api/vehicles', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { reg_number, name, vehicle_type, capacity, odometer, acquisition_cost, status } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO vehicles (company_id, reg_number, name, vehicle_type, capacity, odometer, acquisition_cost, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [companyId, reg_number, name, vehicle_type, capacity, odometer || 0, acquisition_cost || 0.00, status || 'Available']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Create Vehicle Error:', err);
+    if (err.code === '23505') return res.status(400).json({ error: 'Registration number already exists.' });
+    res.status(500).json({ error: 'Failed to create vehicle' });
+  }
+});
+
+// PUT Update Vehicle
+app.put('/api/vehicles/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  const { reg_number, name, vehicle_type, capacity, odometer, acquisition_cost, status } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE vehicles 
+       SET reg_number = $1, name = $2, vehicle_type = $3, capacity = $4, odometer = $5, acquisition_cost = $6, status = $7 
+       WHERE id = $8 AND company_id = $9 RETURNING *`,
+      [reg_number, name, vehicle_type, capacity, odometer, acquisition_cost, status, id, companyId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Update Vehicle Error:', err);
+    if (err.code === '23505') return res.status(400).json({ error: 'Registration number already exists.' });
+    res.status(500).json({ error: 'Failed to update vehicle' });
+  }
+});
+
+// DELETE Vehicle
+app.delete('/api/vehicles/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM vehicles WHERE id = $1 AND company_id = $2 RETURNING id', [id, companyId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
+    res.json({ message: 'Vehicle deleted successfully' });
+  } catch (err) {
+    console.error('Delete Vehicle Error:', err);
+    res.status(500).json({ error: 'Failed to delete vehicle' });
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

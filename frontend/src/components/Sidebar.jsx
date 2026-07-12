@@ -7,7 +7,8 @@ import {
   Wrench, 
   Fuel, 
   BarChart3, 
-  Settings 
+  Settings,
+  Truck
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -26,7 +27,9 @@ const Sidebar = () => {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="logo">
-          <div className="logo-icon"></div>
+          <div className="logo-icon">
+            <Truck size={20} color="white" />
+          </div>
           <h2>TransitOps</h2>
         </div>
       </div>

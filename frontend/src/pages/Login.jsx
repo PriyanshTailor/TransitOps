@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Truck } from 'lucide-react';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import './Login.css';
@@ -22,7 +23,9 @@ const Login = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="logo-icon lg"></div>
+          <div className="logo-icon lg">
+            <Truck size={28} color="white" />
+          </div>
           <h2>TransitOps</h2>
           <p>Smart Transport Operations Platform</p>
         </div>

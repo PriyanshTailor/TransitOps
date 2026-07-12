@@ -1,5 +1,5 @@
 :root {
-  /* Colors */
+  /* Default Dark Mode Colors */
   --bg-color: #121212;
   --surface-color: #1e1e1e;
   --surface-hover: #2c2c2c;
@@ -14,7 +14,18 @@
   --info: #3b82f6;
   --warning: #eab308;
   --danger: #ef4444;
+}
 
+body.light-mode {
+  --bg-color: #f8fafc;
+  --surface-color: #ffffff;
+  --surface-hover: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+}
+
+:root {
   /* Typography */
   --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   

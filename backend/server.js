@@ -388,7 +388,7 @@ app.get('/api/trips', authMiddleware, async (req, res) => {
 // POST Create Trip
 app.post('/api/trips', authMiddleware, async (req, res) => {
   const { companyId } = req.user;
-  const { origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date } = req.body;
+  const { origin, destination, vehicle_id, driver_id, weight, distance, revenue, status, trip_date } = req.body;
   try {
     await pool.query('BEGIN');
     
@@ -406,9 +406,9 @@ app.post('/api/trips', authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO trips (company_id, origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [companyId, origin, destination, vehicle_id, driver_id, weight, distance || 0.00, status || 'Draft', trip_date]
+      `INSERT INTO trips (company_id, origin, destination, vehicle_id, driver_id, weight, distance, revenue, status, trip_date) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [companyId, origin, destination, vehicle_id, driver_id, weight, distance || 0.00, revenue || 0.00, status || 'Draft', trip_date]
     );
     const newTrip = result.rows[0];
 
@@ -431,7 +431,7 @@ app.post('/api/trips', authMiddleware, async (req, res) => {
 app.put('/api/trips/:id', authMiddleware, async (req, res) => {
   const { companyId } = req.user;
   const { id } = req.params;
-  const { origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date } = req.body;
+  const { origin, destination, vehicle_id, driver_id, weight, distance, revenue, status, trip_date } = req.body;
   try {
     await pool.query('BEGIN');
 
@@ -456,9 +456,9 @@ app.put('/api/trips/:id', authMiddleware, async (req, res) => {
 
     const result = await pool.query(
       `UPDATE trips 
-       SET origin = $1, destination = $2, vehicle_id = $3, driver_id = $4, weight = $5, distance = $6, status = $7, trip_date = $8 
-       WHERE id = $9 AND company_id = $10 RETURNING *`,
-      [origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date, id, companyId]
+       SET origin = $1, destination = $2, vehicle_id = $3, driver_id = $4, weight = $5, distance = $6, revenue = $7, status = $8, trip_date = $9 
+       WHERE id = $10 AND company_id = $11 RETURNING *`,
+      [origin, destination, vehicle_id, driver_id, weight, distance, revenue, status, trip_date, id, companyId]
     );
 
     // Handle Status Transitions
@@ -509,6 +509,210 @@ app.delete('/api/trips/:id', authMiddleware, async (req, res) => {
     console.error('Delete Trip Error:', err);
     res.status(500).json({ error: 'Failed to delete trip' });
   }
+});
+
+// ----------------------------------------------------
+// MAINTENANCE ROUTES
+// ----------------------------------------------------
+
+// GET Maintenance Records
+app.get('/api/maintenance', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const result = await pool.query(`
+      SELECT m.*, v.reg_number as vehicle_reg 
+      FROM maintenance_records m
+      LEFT JOIN vehicles v ON m.vehicle_id = v.id
+      WHERE m.company_id = $1
+      ORDER BY m.created_at DESC
+    `, [companyId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Maintenance Error:', err);
+    res.status(500).json({ error: 'Failed to fetch maintenance records' });
+  }
+});
+
+// POST Create Maintenance Record
+app.post('/api/maintenance', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { vehicle_id, service_type, cost, service_date, status } = req.body;
+  try {
+    await pool.query('BEGIN');
+    const result = await pool.query(
+      `INSERT INTO maintenance_records (company_id, vehicle_id, service_type, cost, service_date, status) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [companyId, vehicle_id, service_type, cost || 0, service_date, status || 'In Progress']
+    );
+    
+    // Automatically switch vehicle status to "In Shop"
+    if (status === 'In Progress') {
+        await pool.query("UPDATE vehicles SET status = 'In Shop' WHERE id = $1 AND company_id = $2", [vehicle_id, companyId]);
+    }
+
+    await pool.query('COMMIT');
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Create Maintenance Error:', err);
+    res.status(500).json({ error: 'Failed to create maintenance record' });
+  }
+});
+
+// PUT Update Maintenance Record
+app.put('/api/maintenance/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  const { vehicle_id, service_type, cost, service_date, status } = req.body;
+  try {
+    await pool.query('BEGIN');
+    const oldRes = await pool.query('SELECT status, vehicle_id FROM maintenance_records WHERE id = $1', [id]);
+    const oldRecord = oldRes.rows[0];
+
+    const result = await pool.query(
+      `UPDATE maintenance_records 
+       SET vehicle_id = $1, service_type = $2, cost = $3, service_date = $4, status = $5 
+       WHERE id = $6 AND company_id = $7 RETURNING *`,
+      [vehicle_id, service_type, cost, service_date, status, id, companyId]
+    );
+
+    // If completed or cancelled, free the vehicle
+    if (oldRecord.status !== status && (status === 'Completed' || status === 'Cancelled')) {
+        await pool.query("UPDATE vehicles SET status = 'Available' WHERE id = $1 AND company_id = $2", [vehicle_id, companyId]);
+    }
+
+    await pool.query('COMMIT');
+    res.json(result.rows[0]);
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Update Maintenance Error:', err);
+    res.status(500).json({ error: 'Failed to update maintenance record' });
+  }
+});
+
+// DELETE Maintenance Record
+app.delete('/api/maintenance/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM maintenance_records WHERE id = $1 AND company_id = $2 RETURNING id', [id, companyId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Record not found' });
+    res.json({ message: 'Record deleted successfully' });
+  } catch (err) {
+    console.error('Delete Maintenance Error:', err);
+    res.status(500).json({ error: 'Failed to delete maintenance record' });
+  }
+});
+
+// ----------------------------------------------------
+// FUEL ROUTES
+// ----------------------------------------------------
+
+// GET Fuel Records
+app.get('/api/fuel', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const result = await pool.query(`
+      SELECT f.*, v.reg_number as vehicle_reg 
+      FROM fuel_records f
+      LEFT JOIN vehicles v ON f.vehicle_id = v.id
+      WHERE f.company_id = $1
+      ORDER BY f.created_at DESC
+    `, [companyId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Fuel Error:', err);
+    res.status(500).json({ error: 'Failed to fetch fuel records' });
+  }
+});
+
+// POST Create Fuel Record
+app.post('/api/fuel', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { vehicle_id, liters, cost, fuel_date, location } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO fuel_records (company_id, vehicle_id, liters, cost, fuel_date, location) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [companyId, vehicle_id, liters, cost, fuel_date, location]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Create Fuel Error:', err);
+    res.status(500).json({ error: 'Failed to create fuel record' });
+  }
+});
+
+// DELETE Fuel Record
+app.delete('/api/fuel/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM fuel_records WHERE id = $1 AND company_id = $2 RETURNING id', [id, companyId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Record not found' });
+    res.json({ message: 'Record deleted successfully' });
+  } catch (err) {
+    console.error('Delete Fuel Error:', err);
+    res.status(500).json({ error: 'Failed to delete fuel record' });
+  }
+});
+
+// ----------------------------------------------------
+// REPORTS ROUTES
+// ----------------------------------------------------
+app.get('/api/reports', authMiddleware, async (req, res) => {
+    const { companyId } = req.user;
+    try {
+        // Calculate Total Fuel and Distance per vehicle
+        const reportData = await pool.query(`
+            SELECT 
+                v.id,
+                v.reg_number,
+                v.name,
+                v.acquisition_cost,
+                COALESCE((SELECT SUM(distance) FROM trips WHERE vehicle_id = v.id AND status = 'Completed'), 0) as total_distance,
+                COALESCE((SELECT SUM(revenue) FROM trips WHERE vehicle_id = v.id AND status = 'Completed'), 0) as total_revenue,
+                COALESCE((SELECT SUM(liters) FROM fuel_records WHERE vehicle_id = v.id), 0) as total_fuel_liters,
+                COALESCE((SELECT SUM(cost) FROM fuel_records WHERE vehicle_id = v.id), 0) as total_fuel_cost,
+                COALESCE((SELECT SUM(cost) FROM maintenance_records WHERE vehicle_id = v.id), 0) as total_maintenance_cost
+            FROM vehicles v
+            WHERE v.company_id = $1
+        `, [companyId]);
+
+        // Process formulas
+        const analytics = reportData.rows.map(row => {
+            const distance = parseFloat(row.total_distance);
+            const fuelLiters = parseFloat(row.total_fuel_liters);
+            const fuelCost = parseFloat(row.total_fuel_cost);
+            const maintCost = parseFloat(row.total_maintenance_cost);
+            const revenue = parseFloat(row.total_revenue);
+            const acqCost = parseFloat(row.acquisition_cost);
+
+            const operationalCost = fuelCost + maintCost;
+            const efficiency = fuelLiters > 0 ? (distance / fuelLiters).toFixed(2) : 'N/A';
+            
+            // ROI = [Revenue - (Maintenance + Fuel)] / Acquisition Cost
+            let roi = 0;
+            if (acqCost > 0) {
+                roi = ((revenue - operationalCost) / acqCost) * 100; // as a percentage
+            }
+
+            return {
+                vehicle_reg: row.reg_number,
+                vehicle_name: row.name,
+                total_distance: distance,
+                total_revenue: revenue,
+                operational_cost: operationalCost,
+                fuel_efficiency: efficiency,
+                roi: roi.toFixed(2) + '%'
+            };
+        });
+
+        res.json(analytics);
+    } catch (err) {
+        console.error('Reports Error:', err);
+        res.status(500).json({ error: 'Failed to generate reports' });
+    }
 });
 
 const PORT = process.env.PORT || 5000;

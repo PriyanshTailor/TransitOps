@@ -16,7 +16,7 @@ const TripManagement = () => {
   
   // Trip Form State
   const [formData, setFormData] = useState({
-    origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0]
+    origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', revenue: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -80,7 +80,7 @@ const TripManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0] });
+    setFormData({ origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', revenue: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0] });
     setError('');
   };
 
@@ -92,6 +92,7 @@ const TripManagement = () => {
     { header: 'Driver', accessor: 'driver_name' },
     { header: 'Weight', accessor: 'weight' },
     { header: 'Distance', accessor: 'distance' },
+    { header: 'Revenue', accessor: 'revenue', render: (row) => `$${row.revenue || 0}` },
     { 
       header: 'Status', 
       accessor: 'status',
@@ -171,6 +172,10 @@ const TripManagement = () => {
 
             <div className="flex gap-md w-full">
                 <Input label="Trip Date" name="trip_date" type="date" value={formData.trip_date} onChange={handleChange} required />
+                <Input label="Expected Revenue ($)" name="revenue" type="number" placeholder="e.g. 1500" value={formData.revenue} onChange={handleChange} required />
+            </div>
+
+            <div className="flex gap-md w-full">
                 <div className="input-group" style={{flex: 1}}>
                     <label className="input-label">Initial Status</label>
                     <select className="input-field" name="status" value={formData.status} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>

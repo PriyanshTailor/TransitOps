@@ -102,3 +102,49 @@ export const deleteTrip = async (id) => {
   if (!response.ok) throw new Error('Failed to delete trip');
   return response.json();
 };
+
+// MAINTENANCE APIs
+export const fetchMaintenance = async () => {
+  const response = await fetch(`${API_URL}/maintenance`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch maintenance');
+  return response.json();
+};
+export const createMaintenance = async (data) => {
+  const response = await fetch(`${API_URL}/maintenance`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+  if (!response.ok) throw new Error('Failed to create maintenance');
+  return response.json();
+};
+export const updateMaintenance = async (id, data) => {
+  const response = await fetch(`${API_URL}/maintenance/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(data) });
+  if (!response.ok) throw new Error('Failed to update maintenance');
+  return response.json();
+};
+export const deleteMaintenance = async (id) => {
+  const response = await fetch(`${API_URL}/maintenance/${id}`, { method: 'DELETE', headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to delete maintenance');
+  return response.json();
+};
+
+// FUEL APIs
+export const fetchFuel = async () => {
+  const response = await fetch(`${API_URL}/fuel`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch fuel logs');
+  return response.json();
+};
+export const createFuel = async (data) => {
+  const response = await fetch(`${API_URL}/fuel`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+  if (!response.ok) throw new Error('Failed to create fuel log');
+  return response.json();
+};
+export const deleteFuel = async (id) => {
+  const response = await fetch(`${API_URL}/fuel/${id}`, { method: 'DELETE', headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to delete fuel log');
+  return response.json();
+};
+
+// REPORTS APIs
+export const fetchReports = async () => {
+  const response = await fetch(`${API_URL}/reports`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch reports');
+  return response.json();
+};

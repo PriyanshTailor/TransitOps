@@ -5,7 +5,7 @@ import { authorizeRoles } from '../middlewares/roleMiddleware.js';
 
 const router = express.Router();
 
-router.get('/stats', authMiddleware, authorizeRoles('Fleet Manager', 'Financial Analyst', 'Driver', 'Safety Officer'), getDashboardStats);
+router.get('/stats', authMiddleware, authorizeRoles('Fleet Manager', 'Financial Analyst', 'Driver', 'Safety Officer', 'Dispatcher'), getDashboardStats);
 router.get('/search', authMiddleware, globalSearch);
 
 export default router;

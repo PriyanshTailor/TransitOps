@@ -24,6 +24,16 @@ export const getDashboardStats = async (req, res) => {
     const revRes = await pool.query("SELECT SUM(revenue) FROM trips WHERE company_id = $1 AND status = 'Completed'", [companyId]);
     const totalRevenue = revRes.rows[0].sum || 0;
 
+    // Dispatcher specific metrics
+    const draftTripsRes = await pool.query("SELECT COUNT(*) FROM trips WHERE company_id = $1 AND status = 'Draft'", [companyId]);
+    const draftTrips = parseInt(draftTripsRes.rows[0].count);
+
+    const availVehRes = await pool.query("SELECT COUNT(*) FROM vehicles WHERE company_id = $1 AND status = 'Available'", [companyId]);
+    const availableVehicles = parseInt(availVehRes.rows[0].count);
+
+    const availDrvRes = await pool.query("SELECT COUNT(*) FROM drivers WHERE company_id = $1 AND status = 'Available'", [companyId]);
+    const availableDrivers = parseInt(availDrvRes.rows[0].count);
+
     // 6. Total Expenses
     const totExpRes = await pool.query("SELECT SUM(amount) FROM expenses WHERE company_id = $1 AND approval_status = 'Approved'", [companyId]);
     const totalExpenses = totExpRes.rows[0].sum || 0;
@@ -76,6 +86,9 @@ export const getDashboardStats = async (req, res) => {
       totalRevenue,
       totalExpenses,
       totalFuelCost,
+      draftTrips,
+      availableVehicles,
+      availableDrivers,
       chartData
     });
   } catch (err) {

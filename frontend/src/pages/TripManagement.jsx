@@ -59,6 +59,31 @@ const TripManagement = () => {
     }
   };
 
+  const handleAutoAssign = async (trip) => {
+    if (vehicles.length === 0 || drivers.length === 0) {
+      alert("AI requires at least one available vehicle and driver to optimize assignments.");
+      return;
+    }
+    
+    // Sort available drivers by safety score descending, and vehicles just by ID for now
+    const bestDriver = [...drivers].sort((a, b) => (b.safety_score || 0) - (a.safety_score || 0))[0];
+    const bestVehicle = vehicles[0]; 
+    
+    try {
+      setLoading(true);
+      await updateTrip(trip.id, { 
+        ...trip, 
+        driver_id: bestDriver.id, 
+        vehicle_id: bestVehicle.id, 
+        status: 'Assigned' 
+      });
+      await loadData();
+    } catch (err) {
+      setError(err.message || 'Auto-assign failed');
+      setLoading(false);
+    }
+  };
+
   const advanceTripStatus = async (trip) => {
     const statusFlow = ['Draft', 'Assigned', 'Approved', 'Dispatched', 'In Transit', 'Completed', 'Archived'];
     const currentIndex = statusFlow.indexOf(trip.status);
@@ -203,6 +228,12 @@ const TripManagement = () => {
                 <Button variant="ghost" style={{color: 'var(--danger)', padding: 0}} onClick={() => handleDelete(trip.id)}>
                    Delete
                 </Button>
+                
+                {trip.status === 'Draft' && (
+                  <Button variant="secondary" style={{padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid #3b82f6'}} onClick={() => handleAutoAssign(trip)}>
+                    ✨ AI Auto-Assign
+                  </Button>
+                )}
                 
                 {trip.status !== 'Archived' && (
                   <Button variant="primary" onClick={() => advanceTripStatus(trip)}>

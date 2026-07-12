@@ -14,7 +14,10 @@ const Dashboard = () => {
     activeTrips: 0,
     vehiclesInShop: 0,
     pendingExpenses: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    draftTrips: 0,
+    availableVehicles: 0,
+    availableDrivers: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,6 +46,10 @@ const Dashboard = () => {
       const maxRevMonth = kpiData.chartData.reduce((prev, current) => (prev.revenue > current.revenue) ? prev : current, kpiData.chartData[0]);
       const totalRev = kpiData.totalRevenue || 0;
       return `Automated Insight: The highest performing month was ${maxRevMonth.name} with a peak revenue of $${maxRevMonth.revenue}. Overall revenue stands at $${totalRev}. Financial health remains stable, maintaining consistent operational margins.`;
+    } else if (userRole === 'Dispatcher') {
+      const pending = kpiData.draftTrips || 0;
+      const readyVehicles = kpiData.availableVehicles || 0;
+      return `Automated Insight: There are currently ${pending} draft trips awaiting assignment. You have ${readyVehicles} vehicles ready for deployment. Prioritize matching available drivers with these resources to maintain fleet momentum.`;
     } else {
       const maxTripsMonth = kpiData.chartData.reduce((prev, current) => (prev.trips > current.trips) ? prev : current, kpiData.chartData[0]);
       const util = kpiData.totalVehicles > 0 ? Math.round(((kpiData.totalVehicles - kpiData.vehiclesInShop) / kpiData.totalVehicles) * 100) : 0;
@@ -96,6 +103,33 @@ const Dashboard = () => {
               <div className="kpi-content">
                 <span className="kpi-label">Net Profit</span>
                 <span className="kpi-value text-success">{loading ? '...' : `$${(kpiData.totalRevenue - (kpiData.totalExpenses || 0) - (kpiData.totalFuelCost || 0)).toFixed(2)}`}</span>
+              </div>
+            </Card>
+          </>
+        ) : userRole === 'Dispatcher' ? (
+          <>
+            <Card>
+              <div className="kpi-content">
+                <span className="kpi-label">Active Trips</span>
+                <span className="kpi-value text-primary">{loading ? '...' : kpiData.activeTrips}</span>
+              </div>
+            </Card>
+            <Card>
+              <div className="kpi-content">
+                <span className="kpi-label">Pending / Draft Trips</span>
+                <span className="kpi-value text-warning">{loading ? '...' : kpiData.draftTrips}</span>
+              </div>
+            </Card>
+            <Card>
+              <div className="kpi-content">
+                <span className="kpi-label">Available Vehicles</span>
+                <span className="kpi-value text-success">{loading ? '...' : kpiData.availableVehicles}</span>
+              </div>
+            </Card>
+            <Card>
+              <div className="kpi-content">
+                <span className="kpi-label">Available Drivers</span>
+                <span className="kpi-value text-info">{loading ? '...' : kpiData.availableDrivers}</span>
               </div>
             </Card>
           </>

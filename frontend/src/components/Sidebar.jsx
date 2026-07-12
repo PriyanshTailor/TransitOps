@@ -1,14 +1,15 @@
 import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, Car, Users, Route, Wrench, FuelPump, BarChart3, Settings, Truck } from 'lucide-react';
 import './Sidebar.css';
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: <span>📊</span> },
-  { path: '/vehicles', label: 'Vehicle Registry', icon: <span>🚗</span> },
-  { path: '/drivers', label: 'Driver Management', icon: <span>👥</span> },
-  { path: '/trips', label: 'Trip Management', icon: <span>🛣️</span> },
-  { path: '/maintenance', label: 'Maintenance', icon: <span>🔧</span> },
-  { path: '/fuel', label: 'Fuel & Expense', icon: <span>⛽</span> },
-  { path: '/reports', label: 'Reports & Analytics', icon: <span>📈</span> },
+  { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { path: '/vehicles', label: 'Vehicle Registry', icon: <Car size={20} /> },
+  { path: '/drivers', label: 'Driver Management', icon: <Users size={20} /> },
+  { path: '/trips', label: 'Trip Management', icon: <Route size={20} /> },
+  { path: '/maintenance', label: 'Maintenance', icon: <Wrench size={20} /> },
+  { path: '/fuel', label: 'Fuel & Expense', icon: <FuelPump size={20} /> },
+  { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} /> },
 ];
 
 const Sidebar = () => {
@@ -16,7 +17,9 @@ const Sidebar = () => {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="logo">
-          <div className="logo-icon"></div>
+          <div className="logo-icon">
+            <Truck size={24} className="logo-svg" />
+          </div>
           <h2>TransitOps</h2>
         </div>
       </div>
@@ -39,7 +42,7 @@ const Sidebar = () => {
 
       <div className="sidebar-footer">
         <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-          <span>⚙️</span>
+          <Settings size={20} />
           <span>Settings</span>
         </NavLink>
       </div>

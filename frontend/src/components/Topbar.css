@@ -17,6 +17,13 @@
   border-radius: var(--radius-md);
   flex: 1;
   max-width: 520px;
+  border: 1px solid var(--border-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.topbar-search:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
 .search-icon {
@@ -28,11 +35,15 @@
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .search-input:focus {
   outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
 }
 
 .topbar-actions {

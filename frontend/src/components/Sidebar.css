@@ -27,6 +27,14 @@
   height: 42px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--primary-color), #f59e0b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.logo-svg {
+  color: white;
 }
 
 .logo h2 {

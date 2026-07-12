@@ -210,10 +210,9 @@ CREATE TABLE audit_logs (
     company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     action VARCHAR(255) NOT NULL,
-    module VARCHAR(100) NOT NULL,
-    old_value JSONB,
-    new_value JSONB,
-    status VARCHAR(50) DEFAULT 'Success',
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id UUID,
+    details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

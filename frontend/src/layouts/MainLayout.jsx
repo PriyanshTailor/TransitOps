@@ -3,12 +3,12 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import './MainLayout.css';
 
-const MainLayout = ({ onLogout }) => {
+const MainLayout = ({ onLogout, userRole }) => {
   return (
     <div className="layout-container">
-      <Sidebar />
+      <Sidebar userRole={userRole} />
       <div className="main-area">
-        <Topbar onLogout={onLogout} />
+        <Topbar onLogout={onLogout} userRole={userRole} />
         <main className="content-area">
           <Outlet />
         </main>

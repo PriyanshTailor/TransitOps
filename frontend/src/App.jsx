@@ -12,34 +12,55 @@ import FuelExpense from './pages/FuelExpense';
 import ReportsAnalytics from './pages/Reports';
 import Settings from './pages/Settings';
 
+const ProtectedRoute = ({ isAllowed, children, redirectTo = "/dashboard" }) => {
+  if (!isAllowed) {
+    return <Navigate to={redirectTo} replace />;
+  }
+  return children;
+};
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for JWT token on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      setIsAuthenticated(true);
+    const userString = localStorage.getItem('user');
+    if (token && userString) {
+      try {
+        const user = JSON.parse(userString);
+        setIsAuthenticated(true);
+        setUserRole(user.role);
+      } catch (e) {
+        console.error("Failed to parse user data");
+      }
     }
     setIsLoading(false);
   }, []);
 
+  const handleLogin = (user) => {
+    setIsAuthenticated(true);
+    setUserRole(user.role);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setIsAuthenticated(false);
+    setUserRole(null);
   };
 
   if (isLoading) {
-    return <div>Loading...</div>; // Could be a nicer loading screen
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
     return (
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
@@ -47,19 +68,64 @@ const App = () => {
     );
   }
 
+  // Role Permissions
+  const canManageVehicles = ['Super Admin', 'Fleet Manager'].includes(userRole);
+  const canManageDrivers = ['Super Admin', 'Dispatcher', 'Safety Officer'].includes(userRole);
+  const canManageTrips = ['Super Admin', 'Dispatcher'].includes(userRole);
+  const canManageMaintenance = ['Super Admin', 'Fleet Manager'].includes(userRole);
+  const canManageFuel = ['Super Admin', 'Fleet Manager', 'Financial Analyst', 'Driver'].includes(userRole);
+  const canViewReports = ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst'].includes(userRole);
+  const canManageSettings = ['Super Admin'].includes(userRole);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainLayout onLogout={handleLogout} />}>
+        <Route path="/" element={<MainLayout onLogout={handleLogout} userRole={userRole} />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="vehicles" element={<VehicleRegistry />} />
-          <Route path="drivers" element={<DriverManagement />} />
-          <Route path="trips" element={<TripManagement />} />
-          <Route path="maintenance" element={<Maintenance />} />
-          <Route path="fuel" element={<FuelExpense />} />
-          <Route path="reports" element={<ReportsAnalytics />} />
-          <Route path="settings" element={<Settings />} />
+          
+          <Route path="vehicles" element={
+            <ProtectedRoute isAllowed={canManageVehicles}>
+              <VehicleRegistry />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="drivers" element={
+            <ProtectedRoute isAllowed={canManageDrivers}>
+              <DriverManagement />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="trips" element={
+            <ProtectedRoute isAllowed={canManageTrips}>
+              <TripManagement />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="maintenance" element={
+            <ProtectedRoute isAllowed={canManageMaintenance}>
+              <Maintenance />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="fuel" element={
+            <ProtectedRoute isAllowed={canManageFuel}>
+              <FuelExpense />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="reports" element={
+            <ProtectedRoute isAllowed={canViewReports}>
+              <ReportsAnalytics />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="settings" element={
+            <ProtectedRoute isAllowed={canManageSettings}>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

@@ -293,6 +293,224 @@ app.delete('/api/vehicles/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ----------------------------------------------------
+// DRIVER ROUTES
+// ----------------------------------------------------
+
+// GET All Drivers
+app.get('/api/drivers', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const result = await pool.query('SELECT * FROM drivers WHERE company_id = $1 ORDER BY created_at DESC', [companyId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Drivers Error:', err);
+    res.status(500).json({ error: 'Failed to fetch drivers' });
+  }
+});
+
+// POST Create Driver
+app.post('/api/drivers', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { name, license_number, category, license_expiry, contact_number, score, status } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO drivers (company_id, name, license_number, category, license_expiry, contact_number, score, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [companyId, name, license_number, category, license_expiry, contact_number, score || 100, status || 'Available']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Create Driver Error:', err);
+    if (err.code === '23505') return res.status(400).json({ error: 'License number already exists.' });
+    res.status(500).json({ error: 'Failed to create driver' });
+  }
+});
+
+// PUT Update Driver
+app.put('/api/drivers/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  const { name, license_number, category, license_expiry, contact_number, score, status } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE drivers 
+       SET name = $1, license_number = $2, category = $3, license_expiry = $4, contact_number = $5, score = $6, status = $7 
+       WHERE id = $8 AND company_id = $9 RETURNING *`,
+      [name, license_number, category, license_expiry, contact_number, score, status, id, companyId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Driver not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Update Driver Error:', err);
+    if (err.code === '23505') return res.status(400).json({ error: 'License number already exists.' });
+    res.status(500).json({ error: 'Failed to update driver' });
+  }
+});
+
+// DELETE Driver
+app.delete('/api/drivers/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM drivers WHERE id = $1 AND company_id = $2 RETURNING id', [id, companyId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Driver not found' });
+    res.json({ message: 'Driver deleted successfully' });
+  } catch (err) {
+    console.error('Delete Driver Error:', err);
+    res.status(500).json({ error: 'Failed to delete driver' });
+  }
+});
+
+// ----------------------------------------------------
+// TRIP ROUTES
+// ----------------------------------------------------
+
+// GET All Trips (with Vehicle Reg and Driver Name)
+app.get('/api/trips', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  try {
+    const result = await pool.query(`
+      SELECT t.*, v.reg_number as vehicle_reg, d.name as driver_name 
+      FROM trips t
+      LEFT JOIN vehicles v ON t.vehicle_id = v.id
+      LEFT JOIN drivers d ON t.driver_id = d.id
+      WHERE t.company_id = $1
+      ORDER BY t.created_at DESC
+    `, [companyId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Trips Error:', err);
+    res.status(500).json({ error: 'Failed to fetch trips' });
+  }
+});
+
+// POST Create Trip
+app.post('/api/trips', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date } = req.body;
+  try {
+    await pool.query('BEGIN');
+    
+    // Check if vehicle exists and capacity is sufficient
+    const vRes = await pool.query('SELECT capacity FROM vehicles WHERE id = $1 AND company_id = $2', [vehicle_id, companyId]);
+    if (vRes.rows.length === 0) throw new Error('Vehicle not found');
+    
+    // Parse weight and capacity to numeric for comparison. We assume formats like "8,500 kg" or just numeric strings.
+    const vehicleCap = parseFloat(vRes.rows[0].capacity.replace(/,/g, '').replace('kg', '').trim()) || 0;
+    const tripWeight = parseFloat(weight.toString().replace(/,/g, '').replace('kg', '').trim()) || 0;
+    
+    if (tripWeight > vehicleCap) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({ error: `Cargo weight (${tripWeight}kg) exceeds vehicle maximum capacity (${vehicleCap}kg).` });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO trips (company_id, origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [companyId, origin, destination, vehicle_id, driver_id, weight, distance || 0.00, status || 'Draft', trip_date]
+    );
+    const newTrip = result.rows[0];
+
+    // If initial status is Dispatched, update vehicle and driver status
+    if (status === 'Dispatched') {
+      await pool.query("UPDATE vehicles SET status = 'On Trip' WHERE id = $1", [vehicle_id]);
+      await pool.query("UPDATE drivers SET status = 'On Trip' WHERE id = $1", [driver_id]);
+    }
+
+    await pool.query('COMMIT');
+    res.status(201).json(newTrip);
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Create Trip Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create trip' });
+  }
+});
+
+// PUT Update Trip
+app.put('/api/trips/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  const { origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date } = req.body;
+  try {
+    await pool.query('BEGIN');
+
+    // Get old trip state to detect status changes
+    const oldTripRes = await pool.query('SELECT * FROM trips WHERE id = $1 AND company_id = $2', [id, companyId]);
+    if (oldTripRes.rows.length === 0) {
+        await pool.query('ROLLBACK');
+        return res.status(404).json({ error: 'Trip not found' });
+    }
+    const oldTrip = oldTripRes.rows[0];
+
+    // Validate weight limit again if changed
+    const vRes = await pool.query('SELECT capacity FROM vehicles WHERE id = $1 AND company_id = $2', [vehicle_id, companyId]);
+    if (vRes.rows.length > 0) {
+      const vehicleCap = parseFloat(vRes.rows[0].capacity.replace(/,/g, '').replace('kg', '').trim()) || 0;
+      const tripWeight = parseFloat(weight.toString().replace(/,/g, '').replace('kg', '').trim()) || 0;
+      if (tripWeight > vehicleCap) {
+          await pool.query('ROLLBACK');
+          return res.status(400).json({ error: `Cargo weight (${tripWeight}kg) exceeds vehicle maximum capacity (${vehicleCap}kg).` });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE trips 
+       SET origin = $1, destination = $2, vehicle_id = $3, driver_id = $4, weight = $5, distance = $6, status = $7, trip_date = $8 
+       WHERE id = $9 AND company_id = $10 RETURNING *`,
+      [origin, destination, vehicle_id, driver_id, weight, distance, status, trip_date, id, companyId]
+    );
+
+    // Handle Status Transitions
+    if (oldTrip.status !== status) {
+        if (status === 'Dispatched') {
+            await pool.query("UPDATE vehicles SET status = 'On Trip' WHERE id = $1", [vehicle_id]);
+            await pool.query("UPDATE drivers SET status = 'On Trip' WHERE id = $1", [driver_id]);
+        } else if (status === 'Completed' || status === 'Cancelled') {
+            // Restore old vehicle/driver to available if they were on this trip
+            await pool.query("UPDATE vehicles SET status = 'Available' WHERE id = $1", [oldTrip.vehicle_id]);
+            await pool.query("UPDATE drivers SET status = 'Available' WHERE id = $1", [oldTrip.driver_id]);
+        }
+    }
+
+    await pool.query('COMMIT');
+    res.json(result.rows[0]);
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Update Trip Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update trip' });
+  }
+});
+
+// DELETE Trip
+app.delete('/api/trips/:id', authMiddleware, async (req, res) => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  try {
+    await pool.query('BEGIN');
+    const oldTripRes = await pool.query('SELECT * FROM trips WHERE id = $1 AND company_id = $2', [id, companyId]);
+    if (oldTripRes.rows.length === 0) {
+        await pool.query('ROLLBACK');
+        return res.status(404).json({ error: 'Trip not found' });
+    }
+    const oldTrip = oldTripRes.rows[0];
+
+    // If it was dispatched, we must free the resources before deleting
+    if (oldTrip.status === 'Dispatched') {
+        await pool.query("UPDATE vehicles SET status = 'Available' WHERE id = $1", [oldTrip.vehicle_id]);
+        await pool.query("UPDATE drivers SET status = 'Available' WHERE id = $1", [oldTrip.driver_id]);
+    }
+
+    await pool.query('DELETE FROM trips WHERE id = $1', [id]);
+    await pool.query('COMMIT');
+    res.json({ message: 'Trip deleted successfully' });
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Delete Trip Error:', err);
+    res.status(500).json({ error: 'Failed to delete trip' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);

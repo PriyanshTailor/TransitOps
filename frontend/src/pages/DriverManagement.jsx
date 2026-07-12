@@ -1,20 +1,101 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Table from '../components/ui/Table';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { mockDrivers } from '../utils/mockData';
+import { fetchDrivers, createDriver, updateDriver, deleteDriver } from '../services/api';
 
 const DriverManagement = () => {
-  const [drivers, setDrivers] = useState(mockDrivers);
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '', license_number: '', category: 'Heavy', license_expiry: '', contact_number: '', score: '100', status: 'Available'
+  });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadDrivers();
+  }, []);
+
+  const loadDrivers = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchDrivers();
+      setDrivers(data);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load drivers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (editingId) {
+        await updateDriver(editingId, formData);
+      } else {
+        await createDriver(formData);
+      }
+      setIsAdding(false);
+      setEditingId(null);
+      resetForm();
+      loadDrivers();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleEdit = (driver) => {
+    setFormData({
+      name: driver.name,
+      license_number: driver.license_number,
+      category: driver.category,
+      // Format date for input[type="date"]
+      license_expiry: driver.license_expiry ? new Date(driver.license_expiry).toISOString().split('T')[0] : '',
+      contact_number: driver.contact_number || '',
+      score: driver.score,
+      status: driver.status
+    });
+    setEditingId(driver.id);
+    setIsAdding(true);
+    window.scrollTo(0, 0);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this driver?')) return;
+    try {
+      await deleteDriver(id);
+      loadDrivers();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', license_number: '', category: 'Heavy', license_expiry: '', contact_number: '', score: '100', status: 'Available' });
+    setError('');
+  };
 
   const columns = [
     { header: 'Driver Name', accessor: 'name' },
-    { header: 'License No', accessor: 'license' },
+    { header: 'License No', accessor: 'license_number' },
+    { header: 'Contact', accessor: 'contact_number' },
     { header: 'Category', accessor: 'category' },
-    { header: 'Expiry Date', accessor: 'expiry' },
+    { 
+      header: 'Expiry Date', 
+      accessor: 'license_expiry',
+      render: (row) => row.license_expiry ? new Date(row.license_expiry).toLocaleDateString() : 'N/A'
+    },
     { 
       header: 'Safety Score', 
       accessor: 'score',
@@ -50,8 +131,11 @@ const DriverManagement = () => {
     },
     {
       header: 'Actions',
-      render: () => (
-        <Button variant="ghost" className="text-sm">View</Button>
+      render: (row) => (
+        <div style={{display: 'flex', gap: '0.5rem'}}>
+          <Button variant="ghost" className="text-sm" onClick={() => handleEdit(row)}>Edit</Button>
+          <Button variant="ghost" className="text-sm" style={{color: 'var(--danger)'}} onClick={() => handleDelete(row.id)}>Delete</Button>
+        </div>
       )
     }
   ];
@@ -60,27 +144,52 @@ const DriverManagement = () => {
     <div className="flex-col gap-lg">
       <div className="page-header">
         <h2>Driver Management</h2>
-        <Button onClick={() => setIsAdding(!isAdding)}>
+        <Button onClick={() => {
+          setIsAdding(!isAdding);
+          if (!isAdding) resetForm();
+          setEditingId(null);
+        }}>
           {isAdding ? 'Cancel' : '+ Add Driver'}
         </Button>
       </div>
 
+      {error && <div style={{color: 'var(--danger)', padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px'}}>{error}</div>}
+
       {isAdding && (
-        <Card title="Add New Driver" className="mb-4">
-          <form className="flex-col gap-md" style={{ maxWidth: '500px' }}>
-            <Input label="Full Name" placeholder="e.g. John Doe" />
-            <Input label="License Number" placeholder="e.g. DL-123456789" />
+        <Card title={editingId ? "Edit Driver" : "Add New Driver"} className="mb-4">
+          <form className="flex-col gap-md" onSubmit={handleSave}>
             <div className="flex gap-md w-full">
-              <Input label="Category" placeholder="e.g. Heavy" />
-              <Input label="Expiry Date" type="date" />
+                <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} required placeholder="e.g. John Doe" />
+                <Input label="License Number" name="license_number" value={formData.license_number} onChange={handleChange} required placeholder="e.g. DL-123456789" />
             </div>
-            <Button type="button">Save Driver</Button>
+            <div className="flex gap-md w-full">
+                <Input label="Contact Number" name="contact_number" value={formData.contact_number} onChange={handleChange} placeholder="e.g. +1 234 567 890" />
+                <Input label="Category" name="category" value={formData.category} onChange={handleChange} placeholder="e.g. Heavy" />
+            </div>
+            <div className="flex gap-md w-full">
+                <Input label="Expiry Date" name="license_expiry" type="date" value={formData.license_expiry} onChange={handleChange} required />
+                <Input label="Safety Score (0-100)" name="score" type="number" min="0" max="100" value={formData.score} onChange={handleChange} />
+            </div>
+            {editingId && (
+                <div className="flex gap-md w-full">
+                    <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem'}}>
+                        <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Status</label>
+                        <select name="status" value={formData.status} onChange={handleChange} style={{padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)'}}>
+                            <option value="Available">Available</option>
+                            <option value="On Trip">On Trip</option>
+                            <option value="Off Duty">Off Duty</option>
+                            <option value="Suspended">Suspended</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+            <Button type="submit" style={{alignSelf: 'flex-start', marginTop: '1rem'}}>{editingId ? 'Update Driver' : 'Save Driver'}</Button>
           </form>
         </Card>
       )}
 
       <Card>
-        <Table columns={columns} data={drivers} />
+        {loading ? <div style={{padding: '2rem', textAlign: 'center'}}>Loading drivers...</div> : <Table columns={columns} data={drivers} />}
       </Card>
     </div>
   );

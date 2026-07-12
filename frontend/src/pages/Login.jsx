@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck } from 'lucide-react';
+// Removed lucide-react import
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import './Login.css';
@@ -24,7 +24,7 @@ const Login = ({ onLogin }) => {
       <div className="login-card">
         <div className="login-header">
           <div className="logo-icon lg">
-            <Truck size={32} className="logo-svg" />
+            <span style={{fontSize: '32px'}}>🚚</span>
           </div>
           <h2>TransitOps</h2>
           <p>Smart Transport Operations Platform</p>

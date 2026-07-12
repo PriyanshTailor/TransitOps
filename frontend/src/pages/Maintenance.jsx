@@ -14,7 +14,7 @@ const Maintenance = () => {
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
-    vehicle_id: '', service_type: '', cost: '', service_date: new Date().toISOString().split('T')[0], status: 'In Progress'
+    vehicle_id: '', maintenance_type: 'Preventive', service_type: '', mechanic: '', garage: '', priority: 'Medium', estimated_cost: '', service_date: new Date().toISOString().split('T')[0], status: 'In Progress'
   });
 
   useEffect(() => {
@@ -76,15 +76,17 @@ const Maintenance = () => {
   };
 
   const resetForm = () => {
-    setFormData({ vehicle_id: '', service_type: '', cost: '', service_date: new Date().toISOString().split('T')[0], status: 'In Progress' });
+    setFormData({ vehicle_id: '', maintenance_type: 'Preventive', service_type: '', mechanic: '', garage: '', priority: 'Medium', estimated_cost: '', service_date: new Date().toISOString().split('T')[0], status: 'In Progress' });
     setError('');
   };
 
   const columns = [
     { header: 'Date', accessor: 'service_date', render: (row) => row.service_date ? new Date(row.service_date).toLocaleDateString() : 'N/A' },
     { header: 'Vehicle', accessor: 'vehicle_reg' },
+    { header: 'Type', accessor: 'maintenance_type' },
     { header: 'Service Type', accessor: 'service_type' },
-    { header: 'Cost', accessor: 'cost', render: (row) => `$${row.cost}` },
+    { header: 'Priority', accessor: 'priority' },
+    { header: 'Est. Cost', accessor: 'estimated_cost', render: (row) => `$${row.estimated_cost}` },
     { 
       header: 'Status', 
       accessor: 'status',
@@ -138,8 +140,34 @@ const Maintenance = () => {
             </div>
 
             <div className="flex gap-md w-full">
+              <div className="input-group" style={{flex: 1}}>
+                <label className="input-label">Maintenance Type</label>
+                <select className="input-field" name="maintenance_type" value={formData.maintenance_type} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
+                  <option value="Preventive">Preventive</option>
+                  <option value="Corrective">Corrective</option>
+                  <option value="Breakdown">Breakdown</option>
+                  <option value="Condition-Based">Condition-Based</option>
+                </select>
+              </div>
               <Input label="Service Type" name="service_type" placeholder="e.g. Engine Repair, Oil Change" value={formData.service_type} onChange={handleChange} required />
-              <Input label="Cost ($)" name="cost" type="number" placeholder="e.g. 500" value={formData.cost} onChange={handleChange} required />
+            </div>
+
+            <div className="flex gap-md w-full">
+              <Input label="Mechanic Name" name="mechanic" value={formData.mechanic} onChange={handleChange} />
+              <Input label="Garage Name" name="garage" value={formData.garage} onChange={handleChange} />
+            </div>
+
+            <div className="flex gap-md w-full">
+              <div className="input-group" style={{flex: 1}}>
+                <label className="input-label">Priority</label>
+                <select className="input-field" name="priority" value={formData.priority} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <Input label="Estimated Cost ($)" name="estimated_cost" type="number" placeholder="e.g. 500" value={formData.estimated_cost} onChange={handleChange} required />
             </div>
 
             <div className="flex gap-md w-full">

@@ -5,6 +5,9 @@ import vehicleRoutes from './routes/vehicleRoutes.js';
 import driverRoutes from './routes/driverRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import tripRoutes from './routes/tripRoutes.js';
+import maintenanceRoutes from './routes/maintenanceRoutes.js';
+import fuelRoutes from './routes/fuelRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
 
 const app = express();
 
@@ -17,6 +20,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/fuel', fuelRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 // TODO: Implement the rest of the modular routes
 // app.use('/api/trips', tripRoutes);

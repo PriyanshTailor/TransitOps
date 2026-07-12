@@ -9,6 +9,7 @@ import DriverManagement from './pages/DriverManagement';
 import TripManagement from './pages/TripManagement';
 import Maintenance from './pages/Maintenance';
 import FuelExpense from './pages/FuelExpense';
+import Expenses from './pages/Expenses';
 import ReportsAnalytics from './pages/Reports';
 import Settings from './pages/Settings';
 
@@ -73,7 +74,8 @@ const App = () => {
   const canManageDrivers = ['Super Admin', 'Dispatcher', 'Safety Officer'].includes(userRole);
   const canManageTrips = ['Super Admin', 'Dispatcher'].includes(userRole);
   const canManageMaintenance = ['Super Admin', 'Fleet Manager'].includes(userRole);
-  const canManageFuel = ['Super Admin', 'Fleet Manager', 'Financial Analyst', 'Driver'].includes(userRole);
+          const canManageFuel = ['Super Admin', 'Fleet Manager', 'Financial Analyst', 'Driver'].includes(userRole);
+  const canManageExpenses = ['Super Admin', 'Financial Analyst', 'Fleet Manager', 'Driver'].includes(userRole);
   const canViewReports = ['Super Admin', 'Fleet Manager', 'Safety Officer', 'Financial Analyst'].includes(userRole);
   const canManageSettings = ['Super Admin'].includes(userRole);
 
@@ -111,6 +113,12 @@ const App = () => {
           <Route path="fuel" element={
             <ProtectedRoute isAllowed={canManageFuel}>
               <FuelExpense />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="expenses" element={
+            <ProtectedRoute isAllowed={canManageExpenses}>
+              <Expenses />
             </ProtectedRoute>
           } />
           

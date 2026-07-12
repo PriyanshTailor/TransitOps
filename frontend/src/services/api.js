@@ -148,3 +148,25 @@ export const fetchReports = async () => {
   if (!response.ok) throw new Error('Failed to fetch reports');
   return response.json();
 };
+
+// EXPENSE APIs
+export const fetchExpenses = async () => {
+  const response = await fetch(`${API_URL}/expenses`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch expenses');
+  return response.json();
+};
+export const createExpense = async (data) => {
+  const response = await fetch(`${API_URL}/expenses`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+  if (!response.ok) throw new Error('Failed to create expense');
+  return response.json();
+};
+export const updateExpenseStatus = async (id, statusData) => {
+  const response = await fetch(`${API_URL}/expenses/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(statusData) });
+  if (!response.ok) throw new Error('Failed to update expense status');
+  return response.json();
+};
+export const deleteExpense = async (id) => {
+  const response = await fetch(`${API_URL}/expenses/${id}`, { method: 'DELETE', headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to delete expense');
+  return response.json();
+};

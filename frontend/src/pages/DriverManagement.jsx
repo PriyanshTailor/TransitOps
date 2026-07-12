@@ -12,7 +12,9 @@ const DriverManagement = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', license_number: '', category: 'Heavy', license_expiry: '', contact_number: '', score: '100', status: 'Available'
+    name: '', license_number: '', category: 'Heavy', license_expiry: '', 
+    contact_number: '', score: '100', status: 'Available',
+    experience_years: '', blood_group: ''
   });
   const [error, setError] = useState('');
 
@@ -64,7 +66,9 @@ const DriverManagement = () => {
       license_expiry: driver.license_expiry ? new Date(driver.license_expiry).toISOString().split('T')[0] : '',
       contact_number: driver.contact_number || '',
       score: driver.score,
-      status: driver.status
+      status: driver.status,
+      experience_years: driver.experience_years || '',
+      blood_group: driver.blood_group || ''
     });
     setEditingId(driver.id);
     setIsAdding(true);
@@ -81,9 +85,11 @@ const DriverManagement = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({ name: '', license_number: '', category: 'Heavy', license_expiry: '', contact_number: '', score: '100', status: 'Available' });
-    setError('');
+    setFormData({ 
+      name: '', license_number: '', category: 'Heavy', license_expiry: '', 
+      contact_number: '', score: '100', status: 'Available',
+      experience_years: '', blood_group: ''
+    });
   };
 
   const columns = [
@@ -169,6 +175,14 @@ const DriverManagement = () => {
             <div className="flex gap-md w-full">
                 <Input label="Expiry Date" name="license_expiry" type="date" value={formData.license_expiry} onChange={handleChange} required />
                 <Input label="Safety Score (0-100)" name="score" type="number" min="0" max="100" value={formData.score} onChange={handleChange} />
+            </div>
+            <div className="flex gap-md w-full">
+              <Input label="Experience (Years)" name="experience_years" type="number" value={formData.experience_years} onChange={handleChange} />
+              <Input label="Blood Group" name="blood_group" value={formData.blood_group} onChange={handleChange} placeholder="e.g. O+" />
+              <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>DL Document Upload</label>
+                <input type="file" style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
+              </div>
             </div>
             {editingId && (
                 <div className="flex gap-md w-full">

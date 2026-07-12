@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import Table from '../components/ui/Table';
-import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import { fetchTrips, createTrip, updateTrip, deleteTrip, fetchVehicles, fetchDrivers } from '../services/api';
 
@@ -14,9 +13,10 @@ const TripManagement = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState('');
   
-  // Trip Form State
   const [formData, setFormData] = useState({
-    origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', revenue: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0]
+    trip_number: `TRP-${Date.now().toString().slice(-6)}`,
+    origin: '', destination: '', vehicle_id: '', driver_id: '',
+    cargo_weight: '', expected_distance: '', revenue: '', trip_date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -32,8 +32,8 @@ const TripManagement = () => {
         fetchDrivers()
       ]);
       setTrips(tripsData);
-      setVehicles(vehiclesData);
-      setDrivers(driversData);
+      setVehicles(vehiclesData.filter(v => v.status === 'Available'));
+      setDrivers(driversData.filter(d => d.status === 'Available'));
     } catch (err) {
       console.error(err);
       setError('Failed to load data');
@@ -46,26 +46,46 @@ const TripManagement = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleCreateTrip = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
     try {
       await createTrip(formData);
       setIsAdding(false);
       resetForm();
-      loadData(); // Reload everything to update vehicle/driver statuses if dispatched
+      loadData();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to create trip');
     }
   };
 
-  const handleStatusChange = async (trip, newStatus) => {
-    if (!window.confirm(`Are you sure you want to mark this trip as ${newStatus}?`)) return;
+  const advanceTripStatus = async (trip) => {
+    const statusFlow = ['Draft', 'Assigned', 'Approved', 'Dispatched', 'In Transit', 'Completed', 'Archived'];
+    const currentIndex = statusFlow.indexOf(trip.status);
+    
+    if (currentIndex === -1 || currentIndex === statusFlow.length - 1) return;
+    
+    const nextStatus = statusFlow[currentIndex + 1];
+    
+    // Check requirements before advancing
+    if (nextStatus === 'Assigned' && (!trip.vehicle_id || !trip.driver_id)) {
+      alert("You must assign a Vehicle and Driver before moving to Assigned stage.");
+      return;
+    }
+
+    if (nextStatus === 'Dispatched') {
+      if (!window.confirm("Dispatching will lock the Vehicle and Driver. Proceed?")) return;
+    }
+    
+    if (nextStatus === 'Completed') {
+      if (!window.confirm("Completing the trip will free up the Vehicle and Driver. Proceed?")) return;
+    }
+
     try {
-      await updateTrip(trip.id, { ...trip, status: newStatus });
-      loadData(); // Reload to update statuses
+      await updateTrip(trip.id, { ...trip, status: nextStatus });
+      loadData();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to update status');
     }
   };
 
@@ -80,122 +100,120 @@ const TripManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ origin: '', destination: '', vehicle_id: '', driver_id: '', weight: '', distance: '', revenue: '', status: 'Draft', trip_date: new Date().toISOString().split('T')[0] });
+    setFormData({
+      trip_number: `TRP-${Date.now().toString().slice(-6)}`,
+      origin: '', destination: '', vehicle_id: '', driver_id: '',
+      cargo_weight: '', expected_distance: '', revenue: '', trip_date: new Date().toISOString().split('T')[0]
+    });
     setError('');
   };
 
-  const columns = [
-    { header: 'Date', accessor: 'trip_date', render: (row) => row.trip_date ? new Date(row.trip_date).toLocaleDateString() : 'N/A' },
-    { header: 'Origin', accessor: 'origin' },
-    { header: 'Destination', accessor: 'destination' },
-    { header: 'Vehicle', accessor: 'vehicle_reg' },
-    { header: 'Driver', accessor: 'driver_name' },
-    { header: 'Weight', accessor: 'weight' },
-    { header: 'Distance', accessor: 'distance' },
-    { header: 'Revenue', accessor: 'revenue', render: (row) => `$${row.revenue || 0}` },
-    { 
-      header: 'Status', 
-      accessor: 'status',
-      render: (row) => {
-        let variant = 'default';
-        if (row.status === 'Completed') variant = 'success';
-        if (row.status === 'Dispatched') variant = 'info';
-        if (row.status === 'Draft') variant = 'warning';
-        if (row.status === 'Cancelled') variant = 'danger';
-        return <Badge variant={variant}>{row.status}</Badge>;
-      }
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div className="flex gap-sm">
-          {row.status === 'Draft' && <Button variant="primary" className="text-sm" onClick={() => handleStatusChange(row, 'Dispatched')}>Dispatch</Button>}
-          {row.status === 'Dispatched' && <Button variant="success" className="text-sm" onClick={() => handleStatusChange(row, 'Completed')}>Complete</Button>}
-          {(row.status === 'Draft' || row.status === 'Dispatched') && <Button variant="ghost" className="text-sm" style={{color: 'var(--danger)'}} onClick={() => handleStatusChange(row, 'Cancelled')}>Cancel</Button>}
-          <Button variant="ghost" className="text-sm" style={{color: 'var(--danger)'}} onClick={() => handleDelete(row.id)}>Delete</Button>
-        </div>
-      )
+  const getStatusVariant = (status) => {
+    switch(status) {
+      case 'Draft': return 'default';
+      case 'Assigned': return 'info';
+      case 'Approved': return 'info';
+      case 'Dispatched': return 'warning';
+      case 'In Transit': return 'warning';
+      case 'Completed': return 'success';
+      case 'Archived': return 'secondary';
+      default: return 'default';
     }
-  ];
-
-  const availableVehicles = vehicles.filter(v => v.status === 'Available');
-  const availableDrivers = drivers.filter(d => d.status === 'Available');
+  };
 
   return (
     <div className="flex-col gap-lg">
       <div className="page-header">
-        <h2>Trip Dispatcher</h2>
+        <h2>Trip Dispatch Workflow</h2>
         <Button onClick={() => {
           setIsAdding(!isAdding);
           if (!isAdding) resetForm();
         }}>
-          {isAdding ? 'Cancel' : '+ Create Trip'}
+          {isAdding ? 'Cancel' : '+ New Trip'}
         </Button>
       </div>
 
       {error && <div style={{color: 'var(--danger)', padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px'}}>{error}</div>}
 
       {isAdding && (
-        <Card title="New Trip Dispatch" className="mb-4">
-          <form onSubmit={handleCreateTrip} className="flex-col gap-md" style={{ maxWidth: '600px' }}>
+        <Card title="Plan New Trip" className="mb-4">
+          <form onSubmit={handleCreate} className="flex-col gap-md" style={{ maxWidth: '800px' }}>
             <div className="flex gap-md w-full">
-              <Input label="Source/Origin" name="origin" placeholder="e.g. Warehouse A" value={formData.origin} onChange={handleChange} required />
-              <Input label="Destination" name="destination" placeholder="e.g. Retail B" value={formData.destination} onChange={handleChange} required />
+              <Input label="Trip ID" name="trip_number" value={formData.trip_number} readOnly />
+              <Input label="Date" name="trip_date" type="date" value={formData.trip_date} onChange={handleChange} required />
             </div>
-            
+
+            <div className="flex gap-md w-full">
+              <Input label="Origin" name="origin" placeholder="e.g. Mumbai" value={formData.origin} onChange={handleChange} required />
+              <Input label="Destination" name="destination" placeholder="e.g. Delhi" value={formData.destination} onChange={handleChange} required />
+            </div>
+
             <div className="flex gap-md w-full">
               <div className="input-group" style={{flex: 1}}>
-                <label className="input-label">Select Vehicle</label>
-                <select className="input-field" name="vehicle_id" value={formData.vehicle_id} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
-                  <option value="">-- Choose Available Vehicle --</option>
-                  {availableVehicles.map(v => (
-                    <option key={v.id} value={v.id}>{v.reg_number} - {v.name} (Max: {v.capacity})</option>
-                  ))}
+                <label className="input-label">Assign Vehicle</label>
+                <select className="input-field" name="vehicle_id" value={formData.vehicle_id} onChange={handleChange} style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
+                  <option value="">-- Choose Vehicle --</option>
+                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.reg_number} ({v.capacity}kg max)</option>)}
                 </select>
               </div>
 
               <div className="input-group" style={{flex: 1}}>
-                <label className="input-label">Select Driver</label>
-                <select className="input-field" name="driver_id" value={formData.driver_id} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
-                  <option value="">-- Choose Available Driver --</option>
-                  {availableDrivers.map(d => (
-                    <option key={d.id} value={d.id}>{d.name} ({d.category})</option>
-                  ))}
+                <label className="input-label">Assign Driver</label>
+                <select className="input-field" name="driver_id" value={formData.driver_id} onChange={handleChange} style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
+                  <option value="">-- Choose Driver --</option>
+                  {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="flex gap-md w-full">
-              <Input label="Cargo Weight (kg)" name="weight" type="number" placeholder="e.g. 5000" value={formData.weight} onChange={handleChange} required />
-              <Input label="Planned Distance (km)" name="distance" type="number" placeholder="e.g. 150" value={formData.distance} onChange={handleChange} required />
-            </div>
-
-            <div className="flex gap-md w-full">
-                <Input label="Trip Date" name="trip_date" type="date" value={formData.trip_date} onChange={handleChange} required />
-                <Input label="Expected Revenue ($)" name="revenue" type="number" placeholder="e.g. 1500" value={formData.revenue} onChange={handleChange} required />
-            </div>
-
-            <div className="flex gap-md w-full">
-                <div className="input-group" style={{flex: 1}}>
-                    <label className="input-label">Initial Status</label>
-                    <select className="input-field" name="status" value={formData.status} onChange={handleChange} required style={{backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}}>
-                    <option value="Draft">Draft</option>
-                    <option value="Dispatched">Dispatched</option>
-                    </select>
-                </div>
+              <Input label="Expected Distance (km)" name="expected_distance" type="number" value={formData.expected_distance} onChange={handleChange} />
+              <Input label="Expected Revenue ($)" name="revenue" type="number" value={formData.revenue} onChange={handleChange} />
+              <Input label="Cargo Weight (kg)" name="cargo_weight" type="number" value={formData.cargo_weight} onChange={handleChange} />
             </div>
 
             <div className="flex gap-md mt-4">
               <Button type="button" variant="secondary" onClick={() => setIsAdding(false)}>Cancel</Button>
-              <Button type="submit" variant="primary">Create Trip</Button>
+              <Button type="submit" variant="primary">Create Trip (Draft)</Button>
             </div>
           </form>
         </Card>
       )}
 
-      <Card>
-        {loading ? <div style={{padding: '2rem', textAlign: 'center'}}>Loading trips...</div> : <Table columns={columns} data={trips} />}
-      </Card>
+      {loading ? (
+        <div style={{padding: '2rem', textAlign: 'center'}}>Loading trips...</div>
+      ) : (
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          {trips.map(trip => (
+            <Card key={trip.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: trip.status === 'Archived' ? 0.6 : 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>{trip.trip_number}</strong>
+                <Badge variant={getStatusVariant(trip.status)}>{trip.status}</Badge>
+              </div>
+              
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                <div>📍 {trip.origin} → {trip.destination}</div>
+                <div>🚚 {trip.vehicle_reg || 'Unassigned'}</div>
+                <div>👤 {trip.driver_name || 'Unassigned'}</div>
+                <div>💰 Revenue: ${trip.revenue}</div>
+                <div>📅 Date: {new Date(trip.trip_date).toLocaleDateString()}</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+                <Button variant="ghost" style={{color: 'var(--danger)', padding: 0}} onClick={() => handleDelete(trip.id)}>
+                   Delete
+                </Button>
+                
+                {trip.status !== 'Archived' && (
+                  <Button variant="primary" onClick={() => advanceTripStatus(trip)}>
+                    Advance Stage →
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

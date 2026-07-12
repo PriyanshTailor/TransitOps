@@ -12,7 +12,9 @@ const VehicleRegistry = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    reg_number: '', name: '', vehicle_type: 'Medium Truck', capacity: '', odometer: '', acquisition_cost: '', status: 'Available'
+    reg_number: '', name: '', vehicle_type: 'Medium Truck', capacity: '', 
+    odometer: '', acquisition_cost: '', status: 'Available',
+    vin_number: '', purchase_date: '', insurance_expiry: ''
   });
   const [error, setError] = useState('');
 
@@ -63,7 +65,10 @@ const VehicleRegistry = () => {
       capacity: vehicle.capacity,
       odometer: vehicle.odometer,
       acquisition_cost: vehicle.acquisition_cost,
-      status: vehicle.status
+      status: vehicle.status,
+      vin_number: vehicle.vin_number || '',
+      purchase_date: vehicle.purchase_date ? new Date(vehicle.purchase_date).toISOString().split('T')[0] : '',
+      insurance_expiry: vehicle.insurance_expiry ? new Date(vehicle.insurance_expiry).toISOString().split('T')[0] : ''
     });
     setEditingId(vehicle.id);
     setIsAdding(true);
@@ -81,7 +86,11 @@ const VehicleRegistry = () => {
   };
 
   const resetForm = () => {
-    setFormData({ reg_number: '', name: '', vehicle_type: 'Medium Truck', capacity: '', odometer: '', acquisition_cost: '', status: 'Available' });
+    setFormData({ 
+      reg_number: '', name: '', vehicle_type: 'Medium Truck', capacity: '', 
+      odometer: '', acquisition_cost: '', status: 'Available',
+      vin_number: '', purchase_date: '', insurance_expiry: ''
+    });
     setError('');
   };
 
@@ -143,6 +152,15 @@ const VehicleRegistry = () => {
             <div className="flex gap-md w-full">
               <Input label="Initial Odometer" name="odometer" type="number" value={formData.odometer} onChange={handleChange} required />
               <Input label="Acquisition Cost ($)" name="acquisition_cost" type="number" step="0.01" value={formData.acquisition_cost} onChange={handleChange} required />
+              <Input label="VIN Number" name="vin_number" value={formData.vin_number} onChange={handleChange} placeholder="e.g. 1HGCM82633A" />
+            </div>
+            <div className="flex gap-md w-full">
+              <Input label="Purchase Date" name="purchase_date" type="date" value={formData.purchase_date} onChange={handleChange} />
+              <Input label="Insurance Expiry" name="insurance_expiry" type="date" value={formData.insurance_expiry} onChange={handleChange} />
+              <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)'}}>RC Document Upload (Optional)</label>
+                <input type="file" style={{padding: '0.5rem', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)'}} />
+              </div>
             </div>
             {editingId && (
                 <div className="flex gap-md w-full">
